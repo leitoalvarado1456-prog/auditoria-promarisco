@@ -1,0 +1,6747 @@
+<!DOCTYPE html>
+
+<html lang="es">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>PROMARISCO - Sistema de Auditoría Operativa</title>
+
+<!-- LIBRERÍA PARA EXPORTAR A EXCEL -->
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<style>
+
+/* =========================================================
+   GENERAL
+========================================================= */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    background: #f2f5f7;
+    color: #18323f;
+    min-height: 100vh;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+header {
+
+    background: linear-gradient(
+        135deg,
+        #004b63,
+        #d6001c
+    );
+
+    color: white;
+
+    padding: 18px 35px;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    box-shadow:
+        0 3px 10px rgba(0,0,0,0.15);
+}
+
+.logo {
+
+    font-size: 25px;
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+}
+
+.subtitulo {
+
+    font-size: 14px;
+
+    opacity: 0.9;
+
+    margin-top: 4px;
+}
+
+
+/* =========================================================
+   CONTENEDOR
+========================================================= */
+
+.contenedor {
+
+    width: 94%;
+
+    max-width: 1250px;
+
+    margin: 30px auto;
+}
+
+.pantalla {
+
+    display: none;
+}
+
+.pantalla.activa {
+
+    display: block;
+}
+
+
+/* =========================================================
+   TITULOS
+========================================================= */
+
+.titulo {
+
+    text-align: center;
+
+    margin-bottom: 25px;
+}
+
+.titulo h1 {
+
+    color: #004b63;
+
+    font-size: 30px;
+}
+
+.titulo p {
+
+    color: #687780;
+
+    margin-top: 8px;
+}
+
+
+/* =========================================================
+   CARDS
+========================================================= */
+
+.card {
+
+    background: white;
+
+    border-radius: 15px;
+
+    padding: 28px;
+
+    margin-bottom: 25px;
+
+    box-shadow:
+        0 4px 15px rgba(0,0,0,0.08);
+}
+
+.card h2 {
+
+    color: #00566d;
+
+    margin-bottom: 20px;
+
+    border-bottom: 2px solid #e5ecef;
+
+    padding-bottom: 10px;
+}
+
+
+/* =========================================================
+   AREAS
+========================================================= */
+
+.areas-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(210px, 1fr));
+
+    gap: 18px;
+}
+
+.area-btn {
+
+    border: none;
+
+    background: white;
+
+    border-radius: 14px;
+
+    padding: 28px 15px;
+
+    min-height: 140px;
+
+    cursor: pointer;
+
+    border: 2px solid #dce7eb;
+
+    transition: 0.25s;
+
+    color: #004b63;
+
+    font-size: 17px;
+
+    font-weight: bold;
+}
+
+.area-btn:hover {
+
+    transform: translateY(-4px);
+
+    border-color: #008ca5;
+
+    box-shadow:
+        0 7px 18px rgba(0,0,0,0.12);
+}
+
+.area-icon {
+
+    font-size: 40px;
+
+    display: block;
+
+    margin-bottom: 12px;
+}
+
+
+/* =========================================================
+   FORMULARIOS
+========================================================= */
+
+.form-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 20px;
+}
+
+.campo {
+
+    display: flex;
+
+    flex-direction: column;
+}
+
+.campo label {
+
+    font-weight: bold;
+
+    margin-bottom: 7px;
+
+    color: #36515d;
+}
+
+input,
+select,
+textarea {
+
+    width: 100%;
+
+    border: 1px solid #cbd8dd;
+
+    border-radius: 8px;
+
+    padding: 12px;
+
+    font-size: 15px;
+
+    outline: none;
+
+    background: white;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+
+    border-color: #008ca5;
+
+    box-shadow:
+        0 0 0 3px rgba(0,140,165,0.10);
+}
+
+textarea {
+
+    min-height: 100px;
+
+    resize: vertical;
+}
+
+
+/* =========================================================
+   BOTONES
+========================================================= */
+
+.acciones {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin-top: 25px;
+
+    flex-wrap: wrap;
+}
+
+.btn {
+
+    border: none;
+
+    border-radius: 9px;
+
+    padding: 13px 24px;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.btn:hover {
+
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+
+    background: #007c91;
+
+    color: white;
+}
+
+.btn-primary:hover {
+
+    background: #006477;
+}
+
+.btn-secondary {
+
+    background: #e7eef1;
+
+    color: #35505b;
+}
+
+.btn-success {
+
+    background: #16844b;
+
+    color: white;
+}
+
+.btn-danger {
+
+    background: #c93c3c;
+
+    color: white;
+
+    padding: 9px 13px;
+}
+
+.btn-excel {
+
+    background: #217346;
+
+    color: white;
+}
+
+.btn-warning {
+
+    background: #d68b00;
+
+    color: white;
+}
+
+
+/* =========================================================
+   PROGRESO
+========================================================= */
+
+.progreso {
+
+    display: flex;
+
+    justify-content: center;
+
+    margin-bottom: 25px;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+}
+
+.paso {
+
+    padding: 8px 15px;
+
+    border-radius: 20px;
+
+    background: #dce7eb;
+
+    color: #60717a;
+
+    font-size: 13px;
+
+    font-weight: bold;
+}
+
+.paso.activo {
+
+    background: #007c91;
+
+    color: white;
+}
+
+
+/* =========================================================
+   PREGUNTAS
+========================================================= */
+
+.pregunta {
+
+    border: 1px solid #dbe5e9;
+
+    border-radius: 12px;
+
+    padding: 18px;
+
+    margin-bottom: 15px;
+
+    background: #fbfcfd;
+}
+
+.pregunta-texto {
+
+    font-weight: bold;
+
+    margin-bottom: 14px;
+
+    line-height: 1.45;
+}
+
+.opciones {
+
+    display: flex;
+
+    gap: 20px;
+
+    flex-wrap: wrap;
+}
+
+.opcion {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    cursor: pointer;
+
+    font-weight: bold;
+}
+
+.opcion input {
+
+    width: auto;
+}
+
+
+/* =========================================================
+   RESULTADO CHECKS
+========================================================= */
+
+.resultado-checks {
+
+    margin-top: 20px;
+
+    padding: 22px;
+
+    border-radius: 12px;
+
+    text-align: center;
+
+    background: #edf7f8;
+
+    border: 2px solid #c8e7eb;
+}
+
+.numero-checks {
+
+    font-size: 38px;
+
+    font-weight: bold;
+
+    color: #007c91;
+}
+
+.evaluacion {
+
+    font-size: 23px;
+
+    font-weight: bold;
+
+    margin-top: 6px;
+}
+
+.excelente {
+
+    color: #16844b;
+}
+
+.aceptable {
+
+    color: #d68b00;
+}
+
+.deficiente {
+
+    color: #c93c3c;
+}
+
+
+/* =========================================================
+   TABLAS
+========================================================= */
+
+.tabla-wrapper {
+
+    overflow-x: auto;
+
+    width: 100%;
+}
+
+table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+    min-width: 1200px;
+}
+
+th {
+
+    background: #00566d;
+
+    color: white;
+
+    padding: 12px 8px;
+
+    font-size: 13px;
+
+    text-align: center;
+}
+
+td {
+
+    border: 1px solid #d8e2e6;
+
+    padding: 8px;
+
+    background: white;
+
+    vertical-align: middle;
+}
+
+td input,
+td select {
+
+    padding: 9px;
+
+    min-width: 100px;
+}
+
+.agregar {
+
+    margin-top: 15px;
+}
+
+
+/* =========================================================
+   CALCULO KG/H
+========================================================= */
+
+.calculo-kgh {
+
+    background: #eef8fa;
+
+    border: 1px solid #bfe0e6;
+
+    border-radius: 8px;
+
+    padding: 10px;
+
+    text-align: center;
+
+    font-weight: bold;
+
+    color: #006477;
+
+    min-width: 145px;
+}
+
+.calculo-kgh small {
+
+    display: block;
+
+    font-size: 10px;
+
+    color: #71858d;
+
+    margin-top: 5px;
+
+    line-height: 1.3;
+}
+
+
+/* =========================================================
+   CUMPLIMIENTO AUTOMATICO MOD
+========================================================= */
+
+.mod-estandar-auto {
+  display: inline-block;
+  min-width: 90px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eef5f7;
+  color: #004b63;
+  border: 1px solid #c9dce2;
+  text-align: center;
+  font-weight: bold;
+  font-size: 15px;
+}
+.mod-estandar-auto small {
+  display:block;
+  margin-top:4px;
+  font-size:10px;
+  font-weight:normal;
+  color:#75848b;
+}
+.cumplimiento-auto {
+    display: inline-block;
+    min-width: 125px;
+    padding: 10px 12px;
+    border-radius: 20px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.cumple-auto {
+    background: #d9f2df;
+    color: #187333;
+    border: 1px solid #a8ddb5;
+}
+
+.no-cumple-auto {
+    background: #f8dada;
+    color: #a32222;
+    border: 1px solid #e8abab;
+}
+
+.pendiente-auto {
+    background: #fff2c9;
+    color: #856404;
+    border: 1px solid #ead58b;
+}
+
+/* =========================================================
+   RESUMEN
+========================================================= */
+
+.resumen-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, 1fr);
+
+    gap: 15px;
+}
+
+.resumen-item {
+
+    background: #f4f8fa;
+
+    border-radius: 10px;
+
+    padding: 15px;
+
+    border-left: 4px solid #007c91;
+}
+
+.resumen-item small {
+
+    display: block;
+
+    color: #75848b;
+
+    margin-bottom: 5px;
+}
+
+.resumen-item strong {
+
+    color: #163d4a;
+}
+
+.mensaje {
+
+    text-align: center;
+
+    padding: 25px;
+
+    margin-top: 20px;
+
+    border-radius: 12px;
+
+    background: #eaf7ef;
+
+    color: #176c40;
+
+    font-weight: bold;
+}
+
+
+/* =========================================================
+   HISTORIAL
+========================================================= */
+
+.historial-info {
+
+    background: #eef8fa;
+
+    border: 1px solid #c8e7eb;
+
+    border-radius: 12px;
+
+    padding: 20px;
+
+    margin-top: 20px;
+
+    text-align: center;
+}
+
+.historial-numero {
+
+    font-size: 36px;
+
+    font-weight: bold;
+
+    color: #007c91;
+
+    margin-bottom: 5px;
+}
+
+.historial-tabla {
+
+    min-width: 1000px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media(max-width: 800px) {
+
+    body {
+        overflow-x: hidden;
+    }
+
+    .tabla-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    table {
+        min-width: 720px;
+    }
+
+    input, select, textarea, button {
+        font-size: 16px;
+    }
+
+
+    .form-grid {
+
+        grid-template-columns: 1fr;
+    }
+
+    .resumen-grid {
+
+        grid-template-columns: 1fr;
+    }
+
+    header {
+
+        padding: 15px 18px;
+    }
+
+    .logo {
+
+        font-size: 19px;
+    }
+
+    .contenedor {
+
+        width: 96%;
+    }
+
+    .card {
+
+        padding: 20px 15px;
+    }
+
+    .acciones {
+
+        flex-direction: column;
+    }
+
+    .acciones .btn {
+
+        width: 100%;
+    }
+}
+
+
+/* =========================================================
+   IMPRESION
+========================================================= */
+
+@media print {
+
+    header,
+    .progreso,
+    .acciones,
+    .btn,
+    .agregar {
+
+        display: none !important;
+    }
+
+    body {
+
+        background: white;
+    }
+
+    .pantalla {
+
+        display: none !important;
+    }
+
+    #pantallaFinal {
+
+        display: block !important;
+    }
+}
+
+
+/* Ajustes móviles para tablas y controles sin alterar la estructura de la auditoría */
+@media (max-width: 700px){
+  .tabla-wrapper{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;}
+  .tabla-wrapper table{min-width:760px;}
+  select,input,textarea,button{font-size:16px;max-width:100%;}
+  .acciones{flex-wrap:wrap;gap:10px;}
+  .acciones .btn{flex:1 1 160px;min-height:46px;}
+  .mod-referencia{font-size:11px;margin-top:5px;color:#75848b;}
+}
+.mod-referencia{font-size:12px;color:#75848b;margin-top:4px;}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- =========================================================
+     HEADER
+========================================================= -->
+
+<header>
+
+<div>
+
+    <div class="logo">
+        PROMARISCO | PRODUCCIÓN
+    </div>
+
+    <div class="subtitulo">
+        Sistema de Auditoría Operativa
+    </div>
+
+</div>
+
+</header>
+
+<div class="contenedor">
+
+<!-- =========================================================
+     PROGRESO
+========================================================= -->
+
+<div class="progreso">
+
+<div class="paso activo" id="paso1">
+    1. Área
+</div>
+
+<div class="paso" id="paso2">
+    2. Datos
+</div>
+
+<div class="paso" id="paso3">
+    3. Rendimiento
+</div>
+
+<div class="paso" id="paso4">
+    4. MOD
+</div>
+
+<div class="paso" id="paso5">
+    5. Resumen
+</div>
+
+</div>
+
+<!-- =========================================================
+     PANTALLA 1 - AREAS
+========================================================= -->
+
+<section id="pantallaAreas" class="pantalla activa">
+
+<div class="titulo">
+
+    <h1>
+        Selección de Área
+    </h1>
+
+    <p>
+        Seleccione el área donde realizará la auditoría.
+    </p>
+
+</div>
+
+
+<div class="card">
+
+    <div class="areas-grid">
+
+        <button
+            class="area-btn"
+            onclick="seleccionarArea('RECEPCION')">
+
+            <span class="area-icon">
+                📦
+            </span>
+
+            RECEPCIÓN
+
+        </button>
+
+        <button
+            class="area-btn"
+            onclick="seleccionarArea('CLASIFICADORA')">
+
+            <span class="area-icon">
+                ⚙️
+            </span>
+
+            CLASIFICADORA
+
+        </button>
+
+        <button
+            class="area-btn"
+            onclick="seleccionarArea('CONGELACION')">
+
+            <span class="area-icon">
+                ❄️
+            </span>
+
+            CONGELACIÓN
+
+        </button>
+
+        <button
+            class="area-btn"
+            onclick="seleccionarArea('REPROCESOS')">
+
+            <span class="area-icon">
+                🔄
+            </span>
+
+            REPROCESOS
+
+        </button>
+
+
+        <button
+            class="area-btn"
+            onclick="seleccionarArea('DESCABEZADO')">
+
+            <span class="area-icon">
+                🦐
+            </span>
+
+            DESCABEZADO
+
+        </button>
+
+
+    </div>
+
+</div>
+
+
+<!-- HISTORIAL -->
+
+<div class="card">
+
+    <h2>
+        📊 Historial de Auditorías
+    </h2>
+
+    <div class="historial-info">
+
+        <div class="historial-numero" id="numeroHistorial">
+            0
+        </div>
+
+        <div>
+            Auditorías guardadas en este navegador
+        </div>
+
+    </div>
+
+
+    <div class="acciones">
+
+        <button
+            class="btn btn-excel"
+            onclick="exportarHistorialExcel()">
+
+            📊 Exportar historial a Excel
+
+        </button>
+
+
+        <button
+            class="btn btn-danger"
+            onclick="borrarHistorial()">
+
+            🗑️ Borrar historial
+
+        </button>
+
+    </div>
+
+</div>
+
+</section>
+
+<!-- =========================================================
+     PANTALLA 2 - DATOS
+========================================================= -->
+
+<section id="pantallaDatos" class="pantalla">
+
+<div class="titulo">
+
+    <h1>
+        Datos de la Auditoría
+    </h1>
+
+    <p>
+        Complete la información general.
+    </p>
+
+</div>
+
+
+<div class="card">
+
+    <h2>
+        Información General
+    </h2>
+
+
+    <div class="form-grid">
+
+
+        <div class="campo">
+
+            <label>
+                ÁREA
+            </label>
+
+            <input
+                type="text"
+                id="areaSeleccionada"
+                readonly>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                DÍA
+            </label>
+
+            <input
+                type="date"
+                id="dia">
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                TURNO
+            </label>
+
+            <select id="turno">
+
+                <option value="">
+                    Seleccione...
+                </option>
+
+                <option value="Turno 1">
+                    Turno 1
+                </option>
+
+                <option value="Turno 2">
+                    Turno 2
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                EQUIPO
+            </label>
+
+            <select id="equipo">
+
+                <option value="">
+                    Seleccione...
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                SUPERVISOR
+            </label>
+
+            <select id="supervisor">
+
+                <option value="">
+                    Seleccione...
+                </option>
+
+                <option value="HUGO VILLAMARIN">
+                    HUGO VILLAMARIN
+                </option>
+
+                <option value="DIEGO LOOR">
+                    DIEGO LOOR
+                </option>
+
+                <option value="NEXAR CEVALLOS">
+                    NEXAR CEVALLOS
+                </option>
+
+                <option value="JOSE FUENTES">
+                    JOSE FUENTES
+                </option>
+
+                <option value="ALLÁN CAMACHO">
+                    ALLÁN CAMACHO
+                </option>
+
+                <option value="JUAN CARLOS JARAMILLO">
+                    JUAN CARLOS JARAMILLO
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                LÍDER
+            </label>
+
+            <select id="lider">
+
+                <option value="">
+                    Seleccione...
+                </option>
+
+                <option value="AMARILIS CRUZ">
+                    AMARILIS CRUZ
+                </option>
+
+                <option value="VICENTE MACIAS">
+                    VICENTE MACIAS
+                </option>
+
+                <option value="MONICA PAREDES">
+                    MONICA PAREDES
+                </option>
+
+                <option value="JONATHAN RIVERA">
+                    JONATHAN RIVERA
+                </option>
+
+                <option value="EDWIN MERCHAN">
+                    EDWIN MERCHAN
+                </option>
+
+            </select>
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>
+                JEFE
+            </label>
+
+            <select id="jefe">
+
+                <option value="">
+                    Seleccione...
+                </option>
+
+                <option value="MIGUEL AIZAGA">
+                    MIGUEL AIZAGA
+                </option>
+
+                <option value="JHON NARVAES">
+                    JHON NARVAES
+                </option>
+
+                <option value="RICARDO MENDIETA">
+                    RICARDO MENDIETA
+                </option>
+
+            </select>
+
+        </div>
+
+
+    </div>
+
+
+    <div class="acciones">
+
+        <button
+            class="btn btn-secondary"
+            onclick="regresarAreas()">
+
+            ← Regresar
+
+        </button>
+
+
+        <button
+            class="btn btn-primary"
+            onclick="irRendimiento()">
+
+            Continuar →
+
+        </button>
+
+    </div>
+
+</div>
+
+</section>
+
+<!-- =========================================================
+     PANTALLA 3 - RENDIMIENTO
+========================================================= -->
+
+<section id="pantallaRendimiento" class="pantalla">
+
+<div class="titulo">
+
+    <h1>
+        RENDIMIENTO
+    </h1>
+
+    <p>
+        Evaluación del liquidador de materia prima.
+    </p>
+
+</div>
+
+
+<div class="card">
+
+    <h2>
+        Evaluación
+    </h2>
+
+
+    <!-- PREGUNTA 1 -->
+
+    <div class="pregunta">
+
+        <div class="pregunta-texto">
+
+            1.- ¿El liquidador de MP se encuentra en sitio
+            al inicio del abastecimiento?
+
+        </div>
+
+        <div class="opciones">
+
+            <label class="opcion">
+                <input type="radio" name="p1" value="SI"
+                onchange="calcularChecks()">
+                SI
+            </label>
+
+            <label class="opcion">
+                <input type="radio" name="p1" value="NO"
+                onchange="calcularChecks()">
+                NO
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- PREGUNTA 2 -->
+
+    <div class="pregunta">
+
+        <div class="pregunta-texto">
+
+            2.- ¿El liquidador de MP coloca la hora
+            de inicio de abastecimiento real?
+
+        </div>
+
+        <div class="opciones">
+
+            <label class="opcion">
+                <input type="radio" name="p2" value="SI"
+                onchange="calcularChecks()">
+                SI
+            </label>
+
+            <label class="opcion">
+                <input type="radio" name="p2" value="NO"
+                onchange="calcularChecks()">
+                NO
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- PREGUNTA 3 -->
+
+    <div class="pregunta">
+
+        <div class="pregunta-texto">
+
+            3.- ¿El liquidador de MP coloca el tipo de
+            congelación de cada presentación?
+            (nota 5, del formato de liquidadores)
+
+        </div>
+
+        <div class="opciones">
+
+            <label class="opcion">
+                <input type="radio" name="p3" value="SI"
+                onchange="calcularChecks()">
+                SI
+            </label>
+
+            <label class="opcion">
+                <input type="radio" name="p3" value="NO"
+                onchange="calcularChecks()">
+                NO
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- PREGUNTA 4 -->
+
+    <div class="pregunta">
+
+        <div class="pregunta-texto">
+
+            4.- ¿El liquidador de MP anota los tiempos
+            reales de las paralizaciones durante la
+            congelación de una presentación?
+
+        </div>
+
+        <div class="opciones">
+
+            <label class="opcion">
+                <input type="radio" name="p4" value="SI"
+                onchange="calcularChecks()">
+                SI
+            </label>
+
+            <label class="opcion">
+                <input type="radio" name="p4" value="NO"
+                onchange="calcularChecks()">
+                NO
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- PREGUNTA 5 -->
+
+    <div class="pregunta">
+
+        <div class="pregunta-texto">
+
+            5.- ¿El liquidador de MP tiene conocimiento
+            del motivo de las paralizaciones en la línea
+            de congelación? ¿Pregunta al operador o al líder?
+
+        </div>
+
+        <div class="opciones">
+
+            <label class="opcion">
+                <input type="radio" name="p5" value="SI"
+                onchange="calcularChecks()">
+                SI
+            </label>
+
+            <label class="opcion">
+                <input type="radio" name="p5" value="NO"
+                onchange="calcularChecks()">
+                NO
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- PREGUNTA 6 -->
+
+    <div class="pregunta">
+
+        <div class="pregunta-texto">
+
+            6.- ¿Coinciden los datos tomados por el auditor
+            con los del liquidador de MP?
+
+        </div>
+
+        <div class="opciones">
+
+            <label class="opcion">
+                <input type="radio" name="p6" value="SI"
+                onchange="calcularChecks()">
+                SI
+            </label>
+
+            <label class="opcion">
+                <input type="radio" name="p6" value="NO"
+                onchange="calcularChecks()">
+                NO
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <!-- PREGUNTA 7 -->
+
+    <div class="pregunta">
+
+        <div class="pregunta-texto">
+
+            7.- ¿La información registrada por el liquidador
+            de MP se encuentra completa y correctamente diligenciada?
+
+        </div>
+
+        <div class="opciones">
+
+            <label class="opcion">
+                <input type="radio" name="p7" value="SI"
+                onchange="calcularChecks()">
+                SI
+            </label>
+
+            <label class="opcion">
+                <input type="radio" name="p7" value="NO"
+                onchange="calcularChecks()">
+                NO
+            </label>
+
+        </div>
+
+    </div>
+
+
+    <div class="campo">
+
+        <label>
+            OBSERVACIONES
+        </label>
+
+        <textarea
+            id="observacionesRendimiento"
+            placeholder="Ingrese observaciones..."></textarea>
+
+    </div>
+
+
+    <div class="resultado-checks">
+
+        <div>
+            RESULTADO AUTOMÁTICO
+        </div>
+
+        <div class="numero-checks">
+
+            <span id="numeroChecks">
+                0
+            </span>
+
+            / 7
+
+        </div>
+
+        <div>
+            Checks obtenidos
+        </div>
+
+        <div
+            class="evaluacion"
+            id="evaluacion">
+
+            PENDIENTE
+
+        </div>
+
+    </div>
+
+
+    <div class="acciones">
+
+        <button
+            class="btn btn-secondary"
+            onclick="regresarDatos()">
+
+            ← Regresar
+
+        </button>
+
+
+        <button
+            class="btn btn-primary"
+            onclick="irMOD()">
+
+            Continuar →
+
+        </button>
+
+    </div>
+
+</div>
+
+</section>
+
+<!-- =========================================================
+     PANTALLA 4 - MOD
+========================================================= -->
+
+<section id="pantallaMOD" class="pantalla">
+
+<div class="titulo">
+    <h1>CUMPLIMIENTO DE MOD</h1>
+    <p id="subtituloMOD">Registre la evaluación de MOD correspondiente al área seleccionada.</p>
+</div>
+
+<div class="card">
+
+    <div id="contenedorMODArea"></div>
+
+    <div class="campo" style="margin-top:25px;">
+        <label>OBSERVACIONES GENERALES</label>
+        <textarea id="observacionesMOD" placeholder="Ingrese observaciones generales del cumplimiento de MOD..."></textarea>
+    </div>
+
+    <div class="acciones">
+        <button class="btn btn-secondary" onclick="regresarRendimiento()">← Regresar</button>
+        <button class="btn btn-success" onclick="finalizar()">Finalizar auditoría ✓</button>
+    </div>
+
+</div>
+
+</section>
+
+<!-- =========================================================
+     PANTALLA 5 - RESUMEN
+========================================================= -->
+
+<section id="pantallaFinal" class="pantalla">
+
+<div class="titulo">
+
+    <h1>
+        Auditoría Finalizada
+    </h1>
+
+    <p>
+        Revise la información antes de exportar.
+    </p>
+
+</div>
+
+
+<div class="card">
+
+    <h2>
+        Resumen General
+    </h2>
+
+
+    <div class="resumen-grid">
+
+        <div class="resumen-item">
+            <small>Área</small>
+            <strong id="resArea"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Día</small>
+            <strong id="resDia"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Turno</small>
+            <strong id="resTurno"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Equipo</small>
+            <strong id="resEquipo"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Supervisor</small>
+            <strong id="resSupervisor"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Líder</small>
+            <strong id="resLider"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Jefe</small>
+            <strong id="resJefe"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Checks</small>
+            <strong id="resChecks"></strong>
+        </div>
+
+        <div class="resumen-item">
+            <small>Evaluación</small>
+            <strong id="resEvaluacion"></strong>
+        </div>
+
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <h2>
+        Cumplimiento de MOD
+    </h2>
+
+
+    <div class="tabla-wrapper">
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>
+                        Línea
+                    </th>
+
+                    <th>
+                        Presentación
+                    </th>
+
+                    <th>
+                        MOD Estándar
+                    </th>
+
+                    <th>
+                        MOD Personal
+                    </th>
+
+                    <th>
+                        Paneras/min
+                    </th>
+
+                    <th>
+                        Kg/h Teórico
+                    </th>
+
+                    <th>
+                        Kg/h Calculado
+                    </th>
+
+                    <th>
+                        Cumplimiento
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="resumenMOD">
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <h2>
+        Observaciones
+    </h2>
+
+
+    <p
+        id="resObservacionesRendimiento"
+        style="margin-bottom:15px; white-space:pre-wrap;">
+    </p>
+
+
+    <p
+        id="resObservacionesMOD"
+        style="white-space:pre-wrap;">
+    </p>
+
+</div>
+
+
+<div class="card">
+
+    <div class="acciones">
+
+        <button
+            class="btn btn-excel"
+            onclick="exportarExcel()">
+
+            📊 Exportar esta auditoría
+
+        </button>
+
+
+        <button
+            class="btn btn-excel"
+            onclick="exportarHistorialExcel()">
+
+            📊 Exportar TODO el historial
+
+        </button>
+
+
+        <button
+            class="btn btn-secondary"
+            onclick="window.print()">
+
+            🖨️ Imprimir
+
+        </button>
+
+
+        <button
+            class="btn btn-primary"
+            onclick="nuevaAuditoria()">
+
+            + Nueva auditoría
+
+        </button>
+
+    </div>
+
+
+    <div class="mensaje">
+
+        ✓ Auditoría completada y guardada correctamente.
+
+        <br>
+
+        <span id="mensajeHistorial"></span>
+
+    </div>
+
+</div>
+
+</section>
+
+</div>
+
+<script>
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
+
+let areaActual = "";
+
+let numeroFilaMOD = 0;
+
+let auditoriaGuardada = false;
+
+const CLAVE_HISTORIAL =
+    "promariscoAuditorias";
+
+
+let auditoria = {
+
+    id: "",
+
+    fechaRegistro: "",
+
+    area: "",
+
+    dia: "",
+
+    turno: "",
+
+    equipo: "",
+
+    supervisor: "",
+
+    lider: "",
+
+    jefe: "",
+
+    preguntas: [],
+
+    checks: 0,
+
+    evaluacion: "",
+
+    observacionesRendimiento: "",
+
+    mod: [],
+
+    observacionesMOD: ""
+
+};
+
+
+/* =========================================================
+   MOSTRAR PANTALLA
+========================================================= */
+
+function mostrarPantalla(id) {
+
+    document.querySelectorAll(".pantalla").forEach(
+        function(p) {
+
+            p.classList.remove("activa");
+
+        }
+    );
+
+
+    document
+        .getElementById(id)
+        .classList.add("activa");
+
+
+    actualizarProgreso(id);
+
+
+    window.scrollTo({
+
+        top: 0,
+
+        behavior: "smooth"
+
+    });
+
+}
+
+
+/* =========================================================
+   ACTUALIZAR PROGRESO
+========================================================= */
+
+function actualizarProgreso(id) {
+
+    document.querySelectorAll(".paso").forEach(
+        function(paso) {
+
+            paso.classList.remove("activo");
+
+        }
+    );
+
+
+    if(id === "pantallaAreas") {
+
+        document
+            .getElementById("paso1")
+            .classList.add("activo");
+
+    }
+
+
+    if(id === "pantallaDatos") {
+
+        document
+            .getElementById("paso2")
+            .classList.add("activo");
+
+    }
+
+
+    if(id === "pantallaRendimiento") {
+
+        document
+            .getElementById("paso3")
+            .classList.add("activo");
+
+    }
+
+
+    if(id === "pantallaMOD") {
+
+        document
+            .getElementById("paso4")
+            .classList.add("activo");
+
+    }
+
+
+    if(id === "pantallaFinal") {
+
+        document
+            .getElementById("paso5")
+            .classList.add("activo");
+
+    }
+
+}
+
+
+/* =========================================================
+   SELECCIONAR AREA
+========================================================= */
+function seleccionarArea(area) {
+
+    areaActual = area;
+
+    document.getElementById("areaSeleccionada").value = area;
+
+    cargarEquipos(area);
+
+    cargarLideres(area);
+
+    // Ocultar o mostrar EQUIPO
+    if(area === "RECEPCION" || area === "REPROCESOS") {
+
+        document.getElementById("equipo").parentElement.style.display = "none";
+
+    } else {
+
+        document.getElementById("equipo").parentElement.style.display = "flex";
+
+    }
+
+    mostrarPantalla("pantallaDatos");
+
+}
+
+/* =========================================================
+   LÍDERES POR ÁREA
+========================================================= */
+
+const LIDERES_POR_AREA = {
+
+    "CONGELACION": [
+        "AMARILIS CRUZ",
+        "VICENTE MACIAS",
+        "MONICA PAREDES",
+        "JONATHAN RIVERA",
+        "EDWIN MERCHAN"
+    ],
+
+    "CLASIFICADORA": [
+        "LUIS VERA",
+        "ERNESTO ACOSTA",
+        "ARTURO ALMEIDA",
+        "FREDDY MONCADA",
+        "EUGENIO PISCO",
+        "GASTON LEON",
+        "DARWIN SAÑAY",
+        "HECTOR MOREIRA",
+        "ALFREDO ABAD",
+        "LUIS MENDOZA"
+    ],
+
+    "RECEPCION": [
+        "IVAN MONTES",
+        "PATRICIA ONTANERA"
+    ],
+
+    "REPROCESOS": [
+        "AMARILIS CRUZ",
+        "VICENTE MACIAS",
+        "MONICA PAREDES",
+        "JONATHAN RIVERA",
+        "EDWIN MERCHAN"
+    ],
+
+    "DESCABEZADO": [
+        "FANNY DELGADO"
+    ]
+
+};
+
+
+function cargarLideres(area) {
+
+    const select =
+        document.getElementById("lider");
+
+    select.innerHTML =
+        '<option value="">Seleccione...</option>';
+
+    const lideres =
+        LIDERES_POR_AREA[area] || [];
+
+    lideres.forEach(function(lider) {
+
+        const option =
+            document.createElement("option");
+
+        option.value = lider;
+        option.textContent = lider;
+
+        select.appendChild(option);
+
+    });
+
+}
+
+
+/* =========================================================
+   CARGAR EQUIPOS
+========================================================= */
+
+function cargarEquipos(area) {
+
+    const select =
+        document.getElementById("equipo");
+
+
+    select.innerHTML =
+        '<option value="">Seleccione...</option>';
+
+
+    let equipos = [];
+
+
+    if(area === "CONGELACION") {
+
+        equipos = [
+
+            "LC1",
+            "LC2",
+            "LC3",
+            "LC4",
+            "FRIGOESCANDIA",
+            "FRIGO-TUNEL"
+
+        ];
+
+    }
+
+
+    else if(area === "CLASIFICADORA") {
+
+        equipos = [
+
+            "Clasificadora 1",
+            "Clasificadora 2",
+            "Clasificadora 3",
+            "Clasificadora 4",
+            "Clasificadora 5",
+            "Clasificadora 6",
+            "Clasificadora 7",
+            "Clasificadora 8",
+            "Clasificadora 9"
+
+        ];
+
+    }
+
+
+
+    else if(area === "DESCABEZADO") {
+
+        equipos = [
+
+            "Descabezado 1",
+            "Descabezado 2"
+
+        ];
+
+    }
+
+
+    equipos.forEach(
+        function(equipo) {
+
+            const option =
+                document.createElement("option");
+
+
+            option.value = equipo;
+
+            option.textContent = equipo;
+
+
+            select.appendChild(option);
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   REGRESAR AREAS
+========================================================= */
+
+function regresarAreas() {
+
+    mostrarPantalla("pantallaAreas");
+
+}
+
+
+/* =========================================================
+   IR A RENDIMIENTO
+========================================================= */
+
+function irRendimiento() {
+
+    const dia =
+        document.getElementById("dia").value;
+
+    const turno =
+        document.getElementById("turno").value;
+
+    const equipo =
+        document.getElementById("equipo").value;
+
+    const supervisor =
+        document.getElementById("supervisor").value;
+
+    const lider =
+        document.getElementById("lider").value;
+
+    const jefe =
+        document.getElementById("jefe").value;
+
+    if(
+        !dia ||
+        !turno ||
+        !supervisor ||
+        !lider ||
+        !jefe ||
+        (
+            areaActual !== "RECEPCION" &&
+            areaActual !== "REPROCESOS" &&
+            !equipo
+        )
+    ) {
+
+        alert(
+            "Complete todos los campos antes de continuar."
+        );
+
+        return;
+
+    }
+
+    auditoria.area = areaActual;
+
+    auditoria.dia = dia;
+
+    auditoria.turno = turno;
+
+    auditoria.equipo =
+        areaActual === "RECEPCION" ||
+        areaActual === "REPROCESOS"
+            ? "N/A"
+            : equipo;
+
+    auditoria.supervisor = supervisor;
+
+    auditoria.lider = lider;
+
+    auditoria.jefe = jefe;
+
+    mostrarPantalla("pantallaRendimiento");
+
+}
+/* =========================================================
+   CHECKS AUTOMATICOS
+========================================================= */
+
+function calcularChecks() {
+
+    let checks = 0;
+
+
+    for(let i = 1; i <= 7; i++) {
+
+        const respuesta =
+            document.querySelector(
+                'input[name="p' + i + '"]:checked'
+            );
+
+
+        if(
+            respuesta &&
+            respuesta.value === "SI"
+        ) {
+
+            checks++;
+
+        }
+
+    }
+
+
+    auditoria.checks =
+        checks;
+
+
+    document
+        .getElementById("numeroChecks")
+        .textContent =
+        checks;
+
+
+    const evaluacion =
+        document.getElementById("evaluacion");
+
+
+    evaluacion.className =
+        "evaluacion";
+
+
+    if(checks === 7) {
+
+        evaluacion.textContent =
+            "EXCELENTE";
+
+        evaluacion.classList.add(
+            "excelente"
+        );
+
+    }
+
+
+    else if(checks >= 5) {
+
+        evaluacion.textContent =
+            "ACEPTABLE";
+
+        evaluacion.classList.add(
+            "aceptable"
+        );
+
+    }
+
+
+    else {
+
+        evaluacion.textContent =
+            "DEFICIENTE";
+
+        evaluacion.classList.add(
+            "deficiente"
+        );
+
+    }
+
+
+    auditoria.evaluacion =
+        evaluacion.textContent;
+
+}
+
+
+/* =========================================================
+   REGRESAR DATOS
+========================================================= */
+
+function regresarDatos() {
+
+    mostrarPantalla(
+        "pantallaDatos"
+    );
+
+}
+
+
+/* =========================================================
+   IR A MOD
+========================================================= */
+
+function irMOD() {
+
+    for(let i = 1; i <= 7; i++) {
+
+        const respuesta =
+            document.querySelector(
+                'input[name="p' + i + '"]:checked'
+            );
+
+
+        if(!respuesta) {
+
+            alert(
+                "Debe responder todas las preguntas de Rendimiento."
+            );
+
+            return;
+
+        }
+
+    }
+
+
+    auditoria.observacionesRendimiento =
+        document.getElementById(
+            "observacionesRendimiento"
+        ).value.trim();
+
+
+    /*
+    Evita crear una segunda fila
+    si regresamos desde MOD.
+    */
+
+    if(
+        document.querySelectorAll(
+            "#cuerpoMOD tr"
+        ).length === 0
+    ) {
+
+        agregarPresentacion();
+
+    }
+
+
+    mostrarPantalla(
+        "pantallaMOD"
+    );
+
+}
+
+
+/* =========================================================
+   REGRESAR RENDIMIENTO
+========================================================= */
+
+function regresarRendimiento() {
+
+    mostrarPantalla(
+        "pantallaRendimiento"
+    );
+
+}
+
+
+/* =========================================================
+   AGREGAR PRESENTACION
+========================================================= */
+
+function agregarPresentacion() {
+
+    numeroFilaMOD = 1;
+
+    const tbody =
+        document.getElementById("cuerpoMOD");
+
+    if(tbody.children.length > 0) {
+        return;
+    }
+
+    const fila = document.createElement("tr");
+    fila.id = "filaMOD_1";
+
+    fila.innerHTML = `
+
+        <td>
+            <select
+                class="lineaCongelacion"
+                onchange="cargarPresentacionesPorLinea(1)">
+                <option value="">Seleccione...</option>
+                <option value="LC1">LC1</option>
+                <option value="LC2">LC2</option>
+                <option value="LC3">LC3</option>
+                <option value="LC4">LC4</option>
+            </select>
+        </td>
+
+        <td>
+            <select
+                class="presentacion"
+                onchange="calcularKgHora(1)">
+                <option value="">Seleccione línea primero...</option>
+            </select>
+        </td>
+
+        <td>
+            <div class="mod-estandar-auto" id="modEstandar_1">
+                —
+                <small>Seleccione línea y presentación</small>
+            </div>
+        </td>
+
+        <td>
+            <input
+                type="number"
+                class="personal"
+                min="0"
+                step="1"
+                placeholder="Personas">
+        </td>
+
+        <td>
+            <input
+                type="number"
+                class="bases"
+                step="0.01"
+                min="0"
+                placeholder="Ej. 3"
+                oninput="calcularKgHora(1)">
+            <small style="
+                display:block;
+                margin-top:5px;
+                color:#75848b;
+                font-size:10px;
+            ">
+                Ingrese paneras/min
+            </small>
+        </td>
+
+        <td>
+            <div class="calculo-kgh" id="teorico_1">
+                —
+                <small>Seleccione presentación</small>
+            </div>
+        </td>
+
+        <td>
+            <div class="calculo-kgh" id="kgh_1">
+                0.00 Kg/h
+                <small>Seleccione presentación</small>
+            </div>
+        </td>
+
+        <td>
+            <div
+                class="cumplimiento-auto pendiente-auto"
+                id="cumplimiento_1">
+                Pendiente
+            </div>
+        </td>
+
+    `;
+
+    tbody.appendChild(fila);
+}
+
+
+/* =========================================================
+   PRESENTACIONES Y MOD ESTÁNDAR POR LÍNEA
+========================================================= */
+
+const PRESENTACIONES_POR_LC = {
+
+    LC1: [
+        {value:"3x6", nombre:"3x6 kg", kilos:6, tipo:"CARRILES", teorico:7200, mod:36},
+        {value:"3x6_agama", nombre:"3x6 kg Agama", kilos:6, tipo:"CARRILES", teorico:7200, mod:36},
+        {value:"2x6", nombre:"2x6 kg", kilos:6, tipo:"CARRILES", teorico:7200, mod:37},
+        {value:"1x20", nombre:"1x20 kg", kilos:20, tipo:"CARRILES", teorico:6000, mod:36},
+        {value:"10x4_lbs", nombre:"10x4 lbs Sunday / Panamei / Olazul", kilos:2, tipo:"CARRILES", teorico:3300, mod:52},
+        {value:"3x6_marel", nombre:"3x6 kg Marel", kilos:6, tipo:"CARRILES", teorico:7200, mod:35},
+        {value:"10x4_lbs_usa", nombre:"10x4 lbs USA Sunday / Coral", kilos:2, tipo:"CARRILES", teorico:3300, mod:49},
+        {value:"10x4_lbs_marel", nombre:"10x4 lbs Sunday / Panamei / Olazul Marel", kilos:2, tipo:"CARRILES", teorico:3300, mod:49},
+        {value:"2x6_marel", nombre:"2x6 kg Marel", kilos:6, tipo:"CARRILES", teorico:7200, mod:36},
+        {value:"3.95", nombre:"3.95 kg Marel", kilos:3.95, tipo:"CARRILES", teorico:"", mod:28},
+        {value:"2.94", nombre:"2.94 kg Retractil Marel", kilos:2.94, tipo:"BASES", teorico:5700, mod:30},
+        {value:"1x20_marel", nombre:"1x20 kg Marel", kilos:20, tipo:"CARRILES", teorico:6000, mod:34},
+        {value:"6x2_china", nombre:"6x2 kg China Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:39},
+        {value:"6x2_korea", nombre:"6x2 kg Korea Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:38},
+        {value:"2_bloque", nombre:"6x2 kg Bloque", kilos:2, tipo:"BASES", teorico:5500, mod:54},
+        {value:"3x6_agama_marel", nombre:"3x6 kg Agama Marel", kilos:6, tipo:"CARRILES", teorico:7200, mod:37},
+        {value:"10x4_lbs_usa_marel", nombre:"10x4 lbs USA Sunday / Coral Marel", kilos:2, tipo:"CARRILES", teorico:3300, mod:46},
+        {value:"1.66_hellas", nombre:"1.66 kg Hellas", kilos:1.66, tipo:"CARRILES", teorico:3700, mod:46},
+        {value:"1x6_unifish", nombre:"1x6 kg S/M Unifish Marel", kilos:6, tipo:"CARRILES", teorico:"", mod:39},
+        {value:"6x2_china_marel", nombre:"6x2 kg China Retractilado Marel", kilos:2, tipo:"BASES", teorico:5900, mod:41},
+        {value:"6x2_korea_marel", nombre:"6x2 kg Korea Retractilado Marel", kilos:2, tipo:"BASES", teorico:5900, mod:40},
+        {value:"6x2_bloque_marel", nombre:"6x2 kg Abad/Riazor/China AB Marel", kilos:2, tipo:"BASES", teorico:5500, mod:58},
+        {value:"3x4_marel", nombre:"3x4 kg Marel", kilos:4, tipo:"CARRILES", teorico:"", mod:32},
+        {value:"1x12_marel", nombre:"1x12 kg Marel", kilos:12, tipo:"CARRILES", teorico:7200, mod:45},
+        {value:"1x6_riazor", nombre:"1x6 kg Riazor", kilos:6, tipo:"CARRILES", teorico:7200, mod:40},
+        {value:"1x6_fenix", nombre:"1x6 kg Retractil Fénix", kilos:6, tipo:"BASES", teorico:4500, mod:26},
+        {value:"45x3.98", nombre:"45x3.98 kg", kilos:3.98, tipo:"CARRILES", teorico:7000, mod:32},
+        {value:"1x6_agama", nombre:"1x6 kg Agama", kilos:6, tipo:"CARRILES", teorico:7200, mod:42},
+        {value:"1x6_agama2", nombre:"1x6 kg Agama", kilos:6, tipo:"CARRILES", teorico:7200, mod:41},
+        {value:"1x12_china", nombre:"1x12 kg China", kilos:12, tipo:"CARRILES", teorico:7200, mod:37},
+        {value:"2.94_final", nombre:"2.94 kg Retractil", kilos:2.94, tipo:"BASES", teorico:5700, mod:28},
+        {value:"6x2_ningbo", nombre:"6x2 kg China Ningbo Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:40},
+        {value:"1.96", nombre:"1.96 kg", kilos:1.96, tipo:"CARRILES", teorico:"", mod:32}
+    ],
+
+    LC2: [
+        {value:"3x6", nombre:"3x6 kg", kilos:6, tipo:"CARRILES", teorico:7200, mod:36},
+        {value:"3x6_agama", nombre:"3x6 kg Agama", kilos:6, tipo:"CARRILES", teorico:7200, mod:36},
+        {value:"2x6", nombre:"2x6 kg", kilos:6, tipo:"CARRILES", teorico:7200, mod:37},
+        {value:"45x3.98", nombre:"45x3.98 kg", kilos:3.98, tipo:"CARRILES", teorico:7000, mod:30},
+        {value:"2.94", nombre:"2.94 kg Retractil", kilos:2.94, tipo:"BASES", teorico:5700, mod:26},
+        {value:"1x20", nombre:"1x20 kg", kilos:20, tipo:"CARRILES", teorico:6000, mod:34},
+        {value:"1x6_agama", nombre:"1x6 kg Agama", kilos:6, tipo:"CARRILES", teorico:7200, mod:41},
+        {value:"1x6_riazor", nombre:"1x6 kg Riazor", kilos:6, tipo:"CARRILES", teorico:7200, mod:40},
+        {value:"1x6_fenix", nombre:"1x6 kg Retractil Fénix", kilos:6, tipo:"BASES", teorico:4500, mod:26},
+        {value:"10x4_lbs", nombre:"10x4 lbs Sunday / Panamei / Olazul", kilos:2, tipo:"CARRILES", teorico:3300, mod:43},
+        {value:"10x4_lbs_usa", nombre:"10x4 lbs USA Sunday / Coral", kilos:2, tipo:"CARRILES", teorico:3300, mod:43},
+        {value:"1.66_hellas", nombre:"1.66 kg Hellas", kilos:1.66, tipo:"CARRILES", teorico:3700, mod:43},
+        {value:"6x2_china", nombre:"6x2 kg China Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:37},
+        {value:"6x2_ningbo", nombre:"6x2 kg China Ningbo Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:39},
+        {value:"6x2_korea", nombre:"6x2 kg Korea Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:38},
+        {value:"1x6_unifish", nombre:"1x6 kg S/M Unifish", kilos:6, tipo:"CARRILES", teorico:"", mod:39},
+        {value:"2_bloque", nombre:"6x2 kg Bloque", kilos:2, tipo:"BASES", teorico:5500, mod:44},
+        {value:"1x12_china", nombre:"1x12 kg China", kilos:12, tipo:"CARRILES", teorico:7200, mod:37}
+    ],
+
+    LC3: [
+        {value:"3x6", nombre:"3x6 kg", kilos:6, tipo:"CARRILES", teorico:7200, mod:24},
+        {value:"3x6_agama", nombre:"3x6 kg Agama", kilos:6, tipo:"CARRILES", teorico:7200, mod:29},
+        {value:"2x6", nombre:"2x6 kg", kilos:6, tipo:"CARRILES", teorico:7200, mod:29},
+        {value:"1x6_agama", nombre:"1x6 kg Agama", kilos:6, tipo:"CARRILES", teorico:7200, mod:30},
+        {value:"1x6_riazor", nombre:"1x6 kg Riazor", kilos:6, tipo:"CARRILES", teorico:7200, mod:28},
+        {value:"1x6_fenix", nombre:"1x6 kg Retractil Fénix", kilos:6, tipo:"BASES", teorico:4500, mod:17},
+        {value:"1x20", nombre:"1x20 kg", kilos:20, tipo:"CARRILES", teorico:6000, mod:26},
+        {value:"6x2_china", nombre:"6x2 kg China Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:30},
+        {value:"6x2_korea", nombre:"6x2 kg Korea Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:28},
+        {value:"6x2_ningbo", nombre:"6x2 kg China Ningbo Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:31},
+        {value:"45x3.98", nombre:"45x3.98 kg", kilos:3.98, tipo:"CARRILES", teorico:7000, mod:27}
+    ],
+
+    LC4: [
+        {value:"1x12", nombre:"1x12 kg", kilos:12, tipo:"CARRILES", teorico:7200, mod:38},
+        {value:"45x3.98", nombre:"45x3.98 kg", kilos:3.98, tipo:"CARRILES", teorico:7000, mod:36},
+        {value:"6x2_retractil", nombre:"6x2 kg Retractilado", kilos:2, tipo:"BASES", teorico:5900, mod:44},
+        {value:"3x6", nombre:"3x6 kg", kilos:6, tipo:"CARRILES", teorico:7200, mod:39},
+        {value:"mp9", nombre:"MP 9 kg", kilos:9, tipo:"CARRILES", teorico:"", mod:39}
+    ]
+};
+
+function cargarPresentacionesPorLinea(id) {
+    const fila = document.getElementById("filaMOD_" + id);
+    if(!fila) return;
+
+    const linea = fila.querySelector(".lineaCongelacion").value;
+    const select = fila.querySelector(".presentacion");
+    const modBox = document.getElementById("modEstandar_" + id);
+
+    select.innerHTML = '<option value="">Seleccione...</option>';
+
+    (PRESENTACIONES_POR_LC[linea] || []).forEach(function(item) {
+        const option = document.createElement("option");
+        option.value = item.value;
+        option.textContent = item.nombre;
+        option.dataset.nombre = item.nombre;
+        option.dataset.kilos = item.kilos;
+        option.dataset.tipo = item.tipo;
+        option.dataset.teorico = item.teorico;
+        option.dataset.mod = item.mod;
+        select.appendChild(option);
+    });
+
+    modBox.innerHTML = '—<small>Seleccione presentación</small>';
+    calcularKgHora(id);
+}
+
+
+/* =========================================================
+   CALCULO KG/H
+========================================================= */
+
+function calcularKgHora(id) {
+
+    const fila =
+        document.getElementById(
+            "filaMOD_" + id
+        );
+
+    if(!fila) return;
+
+    const inputPaneras =
+        fila.querySelector(".bases");
+
+    const selectPresentacion =
+        fila.querySelector(".presentacion");
+
+    const panerasMin =
+        parseFloat(inputPaneras.value);
+
+    const opcion =
+        selectPresentacion.options[
+            selectPresentacion.selectedIndex
+        ];
+
+    const resultado =
+        document.getElementById("kgh_" + id);
+
+    const teoricoBox =
+        document.getElementById("teorico_" + id);
+
+    const cumplimiento =
+        document.getElementById("cumplimiento_" + id);
+
+    const modEstandarBox =
+        document.getElementById("modEstandar_" + id);
+
+    if(!opcion || !opcion.value) {
+
+        teoricoBox.innerHTML = `
+            —
+            <small>
+                Seleccione presentación
+            </small>
+        `;
+
+        resultado.innerHTML = `
+            0.00 Kg/h
+            <small>
+                Seleccione presentación
+            </small>
+        `;
+
+        cumplimiento.textContent = "Pendiente";
+        cumplimiento.className =
+            "cumplimiento-auto pendiente-auto";
+
+        if(modEstandarBox) {
+            modEstandarBox.innerHTML = '—<small>Seleccione presentación</small>';
+        }
+
+        return;
+    }
+
+    const kilos =
+        parseFloat(opcion.dataset.kilos);
+
+    const tipo =
+        opcion.dataset.tipo;
+
+    const teorico =
+        opcion.dataset.teorico !== ""
+            ? parseFloat(opcion.dataset.teorico)
+            : null;
+
+    const modEstandar =
+        opcion.dataset.mod !== undefined && opcion.dataset.mod !== ""
+            ? parseInt(opcion.dataset.mod, 10)
+            : null;
+
+    if(modEstandarBox) {
+        modEstandarBox.innerHTML = modEstandar !== null
+            ? `${modEstandar} personas<small>MOD Estándar</small>`
+            : '—<small>Sin estándar</small>';
+    }
+
+    if(teorico !== null) {
+        teoricoBox.innerHTML = `
+            ${formatearNumero(teorico)} Kg/h
+            <small>
+                Valor teórico
+            </small>
+        `;
+    } else {
+        teoricoBox.innerHTML = `
+            Pendiente
+            <small>
+                Teórico no registrado
+            </small>
+        `;
+    }
+
+    if(isNaN(panerasMin) || panerasMin <= 0) {
+
+        resultado.innerHTML = `
+            0.00 Kg/h
+            <small>
+                Ingrese paneras/min
+            </small>
+        `;
+
+        cumplimiento.textContent = "Pendiente";
+        cumplimiento.className =
+            "cumplimiento-auto pendiente-auto";
+
+        return;
+    }
+
+    let kgHora = 0;
+    let formula = "";
+
+    if(tipo === "BASES") {
+
+    /*
+    BLOQUE Y RETRACTILADO
+    Fórmula:
+    Paneras × 4 Bases × 4 Carriles × 60 × Kg Presentación
+    */
+
+    kgHora =
+        panerasMin *
+        4 *
+        4 *
+        60 *
+        kilos;
+
+    formula =
+        `${panerasMin} Paneras × 4 Bases × 4 Carriles × 60 Min × ${kilos} Kg`;
+
+    } else {
+
+    /*
+    DEMÁS PRESENTACIONES
+    Fórmula:
+    Paneras × 4 Carriles × 60 × Kg Presentación
+    */
+
+    kgHora =
+        panerasMin *
+        4 *
+        60 *
+        kilos;
+
+    formula =
+        `${panerasMin} Paneras × 4 Carriles × 60 Min × ${kilos} Kg`;
+
+    }
+    resultado.innerHTML = `
+        ${formatearNumero(kgHora)} Kg/h
+        <small>
+            ${formula}
+        </small>
+    `;
+
+    if(teorico === null) {
+
+        cumplimiento.textContent = "Pendiente";
+        cumplimiento.className =
+            "cumplimiento-auto pendiente-auto";
+
+    }
+    else if(kgHora >= teorico) {
+
+        cumplimiento.textContent = "✓ CUMPLE";
+        cumplimiento.className =
+            "cumplimiento-auto cumple-auto";
+
+    }
+    else {
+
+        cumplimiento.textContent = "✕ NO CUMPLE";
+        cumplimiento.className =
+            "cumplimiento-auto no-cumple-auto";
+
+    }
+
+}
+
+
+/* =========================================================
+   FORMATEAR NUMEROS
+========================================================= */
+
+function formatearNumero(numero) {
+
+    return Number(numero).toLocaleString(
+        "en-US",
+        {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }
+    );
+
+}
+
+
+/* =========================================================
+   ELIMINAR PRESENTACION
+========================================================= */
+
+function eliminarPresentacion(id) {
+
+    const fila =
+        document.getElementById(
+            "filaMOD_" + id
+        );
+
+
+    if(fila) {
+
+        fila.remove();
+
+    }
+
+}
+
+
+/* =========================================================
+   FINALIZAR
+========================================================= */
+
+function finalizar() {
+
+    if(auditoriaGuardada) {
+
+        cargarResumen();
+
+        mostrarPantalla(
+            "pantallaFinal"
+        );
+
+        return;
+
+    }
+
+
+    const filas =
+        document.querySelectorAll(
+            "#cuerpoMOD tr"
+        );
+
+
+    if(filas.length === 0) {
+
+        alert(
+            "Debe agregar al menos una presentación."
+        );
+
+        return;
+
+    }
+
+
+    const mod = [];
+
+    let error = false;
+
+
+    filas.forEach(
+        function(fila) {
+
+
+            const selectPresentacion =
+                fila.querySelector(
+                    ".presentacion"
+                );
+
+
+            const opcion =
+                selectPresentacion.options[
+                    selectPresentacion.selectedIndex
+                ];
+
+
+            const presentacion =
+                selectPresentacion.value;
+
+            const linea =
+                fila.querySelector(".lineaCongelacion").value;
+
+
+            const nombrePresentacion =
+                opcion.dataset.nombre || "";
+
+
+            const tipo =
+                opcion.dataset.tipo || "";
+
+
+            const estandar =
+                opcion.dataset.mod || "";
+
+            const teorico =
+                opcion.dataset.teorico || "";
+
+
+            const personal =
+                fila.querySelector(
+                    ".personal"
+                ).value;
+
+
+            const panerasMin =
+                fila.querySelector(
+                    ".bases"
+                ).value;
+
+
+            const estadoAuto =
+                fila.querySelector(
+                    ".cumplimiento-auto"
+                );
+
+            const cumplimiento =
+                estadoAuto && estadoAuto.textContent.includes("CUMPLE") &&
+                !estadoAuto.textContent.includes("NO CUMPLE")
+                    ? "Cumple"
+                    : estadoAuto && estadoAuto.textContent.includes("NO CUMPLE")
+                        ? "No Cumple"
+                        : "Pendiente";
+
+
+
+            const kilos =
+                parseFloat(
+                    opcion.dataset.kilos
+                );
+
+
+            const paneras =
+                parseFloat(
+                    panerasMin
+                );
+
+
+            let kgHora = 0;
+
+
+            /*
+            -----------------------------------------------
+            CALCULO SEGUN TIPO
+            -----------------------------------------------
+            */
+
+            if(
+                !isNaN(kilos) &&
+                !isNaN(paneras)
+            ) {
+
+                if(tipo === "BASES") {
+
+                    kgHora =
+                        paneras *
+                        4 *
+                        4 *
+                        60 *
+                        kilos;
+
+                }
+
+                else if(tipo === "CARRILES") {
+
+                    kgHora =
+                        paneras *
+                        4 *
+                        60 *
+                        kilos;
+
+                }
+
+            }
+
+
+            /*
+            -----------------------------------------------
+            VALIDACION
+            -----------------------------------------------
+            */
+
+            if(
+                !linea ||
+                !presentacion ||
+                !personal ||
+                !panerasMin
+            ) {
+
+                error = true;
+
+            }
+
+
+            mod.push({
+
+                linea: linea,
+
+                presentacion:
+                    nombrePresentacion,
+
+                kilos:
+                    kilos,
+
+                tipo:
+                    tipo,
+
+                estandar:
+                    estandar,
+
+                teorico:
+                    teorico,
+
+                personal:
+                    personal,
+
+                panerasMin:
+                    panerasMin,
+
+                kgHora:
+                    kgHora,
+
+                cumplimiento:
+                    cumplimiento
+
+            });
+
+        }
+    );
+
+
+    if(error) {
+
+        alert(
+            "Complete todos los campos obligatorios de las presentaciones."
+        );
+
+        return;
+
+    }
+
+
+    /*
+    =========================================================
+    GUARDAR AUDITORIA
+    =========================================================
+    */
+
+    auditoria.id =
+        Date.now().toString();
+
+
+    auditoria.fechaRegistro =
+        new Date().toLocaleString(
+            "es-EC"
+        );
+
+
+    auditoria.mod =
+        mod;
+
+
+    auditoria.observacionesMOD =
+        document.getElementById(
+            "observacionesMOD"
+        ).value.trim();
+
+
+    /*
+    Guardar respuestas de las 7 preguntas
+    */
+
+    auditoria.preguntas = [];
+
+
+    for(let i = 1; i <= 7; i++) {
+
+        auditoria.preguntas.push({
+
+            numero: i,
+
+            respuesta:
+                obtenerRespuesta("p" + i)
+
+        });
+
+    }
+
+
+    /*
+    Guardar en historial
+    */
+
+    guardarAuditoria();
+
+
+    auditoriaGuardada = true;
+
+
+    cargarResumen();
+
+
+    mostrarPantalla(
+        "pantallaFinal"
+    );
+
+
+    actualizarContadorHistorial();
+
+}
+
+
+/* =========================================================
+   GUARDAR AUDITORIA EN LOCALSTORAGE
+========================================================= */
+
+function guardarAuditoria() {
+
+    let historial =
+        obtenerHistorial();
+
+
+    historial.push(
+        JSON.parse(
+            JSON.stringify(auditoria)
+        )
+    );
+
+
+    localStorage.setItem(
+
+        CLAVE_HISTORIAL,
+
+        JSON.stringify(historial)
+
+    );
+
+}
+
+
+/* =========================================================
+   OBTENER HISTORIAL
+========================================================= */
+
+function obtenerHistorial() {
+
+    try {
+
+        const datos =
+            localStorage.getItem(
+                CLAVE_HISTORIAL
+            );
+
+
+        if(!datos) {
+
+            return [];
+
+        }
+
+
+        const historial =
+            JSON.parse(datos);
+
+
+        if(!Array.isArray(historial)) {
+
+            return [];
+
+        }
+
+
+        return historial;
+
+    }
+
+    catch(error) {
+
+        console.error(
+            "Error leyendo historial:",
+            error
+        );
+
+
+        return [];
+
+    }
+
+}
+
+
+/* =========================================================
+   ACTUALIZAR CONTADOR HISTORIAL
+========================================================= */
+
+function actualizarContadorHistorial() {
+
+    const historial =
+        obtenerHistorial();
+
+
+    const elemento =
+        document.getElementById(
+            "numeroHistorial"
+        );
+
+
+    if(elemento) {
+
+        elemento.textContent =
+            historial.length;
+
+    }
+
+
+    const mensaje =
+        document.getElementById(
+            "mensajeHistorial"
+        );
+
+
+    if(mensaje) {
+
+        mensaje.textContent =
+            "Total de auditorías guardadas: " +
+            historial.length;
+
+    }
+
+}
+
+
+/* =========================================================
+   CARGAR RESUMEN
+========================================================= */
+
+function cargarResumen() {
+
+    document.getElementById(
+        "resArea"
+    ).textContent =
+        auditoria.area;
+
+
+    document.getElementById(
+        "resDia"
+    ).textContent =
+        auditoria.dia;
+
+
+    document.getElementById(
+        "resTurno"
+    ).textContent =
+        auditoria.turno;
+
+
+    document.getElementById(
+        "resEquipo"
+    ).textContent =
+        auditoria.equipo;
+
+
+    document.getElementById(
+        "resSupervisor"
+    ).textContent =
+        auditoria.supervisor;
+
+
+    document.getElementById(
+        "resLider"
+    ).textContent =
+        auditoria.lider;
+
+
+    document.getElementById(
+        "resJefe"
+    ).textContent =
+        auditoria.jefe;
+
+
+    document.getElementById(
+        "resChecks"
+    ).textContent =
+        auditoria.checks +
+        " / 7";
+
+
+    document.getElementById(
+        "resEvaluacion"
+    ).textContent =
+        auditoria.evaluacion;
+
+
+    document.getElementById(
+        "resObservacionesRendimiento"
+    ).textContent =
+        auditoria.observacionesRendimiento ||
+        "Sin observaciones de rendimiento.";
+
+
+    document.getElementById(
+        "resObservacionesMOD"
+    ).textContent =
+        auditoria.observacionesMOD ||
+        "Sin observaciones generales de MOD.";
+
+
+    const tbody =
+        document.getElementById(
+            "resumenMOD"
+        );
+
+
+    tbody.innerHTML = "";
+
+
+    auditoria.mod.forEach(
+        function(item) {
+
+            const fila =
+                document.createElement("tr");
+
+
+            fila.innerHTML = `
+
+                <td>
+                    ${escapeHTML(item.linea || "")}
+                </td>
+
+                <td>
+                    ${escapeHTML(item.presentacion)}
+                </td>
+
+                <td>
+                    ${escapeHTML(item.estandar)}
+                </td>
+
+                <td>
+                    ${escapeHTML(item.personal)}
+                </td>
+
+                <td>
+                    ${escapeHTML(item.panerasMin)}
+                </td>
+
+                <td>
+                    ${item.teorico ? formatearNumero(item.teorico) : "—"}
+                </td>
+
+                <td>
+                    ${formatearNumero(item.kgHora)}
+                </td>
+
+                <td>
+
+                    ${
+                        item.cumplimiento === "Cumple"
+                        ? "✓ Cumple"
+                        : item.cumplimiento === "No Cumple"
+                            ? "✕ No Cumple"
+                            : "Pendiente"
+                    }
+
+                </td>
+
+            `;
+
+
+            tbody.appendChild(fila);
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   PROTEGER HTML
+========================================================= */
+
+function escapeHTML(text) {
+
+    return String(text)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+/* =========================================================
+   OBTENER RESPUESTA
+========================================================= */
+
+function obtenerRespuesta(nombre) {
+
+    const respuesta =
+        document.querySelector(
+            'input[name="' +
+            nombre +
+            '"]:checked'
+        );
+
+
+    return respuesta
+        ? respuesta.value
+        : "";
+
+}
+
+
+/* =========================================================
+   EXPORTAR AUDITORIA ACTUAL A EXCEL
+========================================================= */
+
+function exportarExcel() {
+
+    if(
+        typeof XLSX === "undefined"
+    ) {
+
+        alert(
+            "No se pudo cargar la herramienta de Excel. Verifique su conexión a Internet."
+        );
+
+        return;
+
+    }
+
+
+    /*
+    =========================================================
+    HOJA RESUMEN
+    =========================================================
+    */
+
+    const resumen = [
+
+        [
+            "PROMARISCO - SISTEMA DE AUDITORÍA OPERATIVA"
+        ],
+
+        [],
+
+        [
+            "INFORMACIÓN GENERAL"
+        ],
+
+        [
+            "Área",
+            auditoria.area
+        ],
+
+        [
+            "Día",
+            auditoria.dia
+        ],
+
+        [
+            "Turno",
+            auditoria.turno
+        ],
+
+        [
+            "Equipo",
+            auditoria.equipo
+        ],
+
+        [
+            "Supervisor",
+            auditoria.supervisor
+        ],
+
+        [
+            "Líder",
+            auditoria.lider
+        ],
+
+        [
+            "Jefe",
+            auditoria.jefe
+        ],
+
+        [],
+
+        [
+            "RENDIMIENTO"
+        ],
+
+        [
+            "Checks obtenidos",
+            auditoria.checks + " / 7"
+        ],
+
+        [
+            "Evaluación",
+            auditoria.evaluacion
+        ],
+
+        [
+            "Observaciones",
+            auditoria.observacionesRendimiento
+        ],
+
+        [],
+
+        [
+            "OBSERVACIONES GENERALES MOD",
+            auditoria.observacionesMOD
+        ]
+
+    ];
+
+
+    const wsResumen =
+        XLSX.utils.aoa_to_sheet(
+            resumen
+        );
+
+
+    /*
+    =========================================================
+    HOJA RENDIMIENTO
+    =========================================================
+    */
+
+    const preguntas = [
+
+        [
+            "Pregunta",
+            "Respuesta"
+        ],
+
+        [
+            "¿El liquidador de MP se encuentra en sitio al inicio del abastecimiento?",
+            obtenerRespuesta("p1")
+        ],
+
+        [
+            "¿El liquidador de MP coloca la hora de inicio de abastecimiento real?",
+            obtenerRespuesta("p2")
+        ],
+
+        [
+            "¿El liquidador de MP coloca el tipo de congelación de cada presentación?",
+            obtenerRespuesta("p3")
+        ],
+
+        [
+            "¿El liquidador de MP anota los tiempos reales de las paralizaciones durante la congelación de una presentación?",
+            obtenerRespuesta("p4")
+        ],
+
+        [
+            "¿El liquidador de MP tiene conocimiento del motivo de las paralizaciones en la línea de congelación?",
+            obtenerRespuesta("p5")
+        ],
+
+        [
+            "¿Coinciden los datos tomados por el auditor con los del liquidador de MP?",
+            obtenerRespuesta("p6")
+        ],
+
+        [
+            "¿La información registrada por el liquidador de MP se encuentra completa y correctamente diligenciada?",
+            obtenerRespuesta("p7")
+        ],
+
+        [],
+
+        [
+            "Checks obtenidos",
+            auditoria.checks
+        ],
+
+        [
+            "Evaluación",
+            auditoria.evaluacion
+        ],
+
+        [
+            "Observaciones",
+            auditoria.observacionesRendimiento
+        ]
+
+    ];
+
+
+    const wsRendimiento =
+        XLSX.utils.aoa_to_sheet(
+            preguntas
+        );
+
+
+    /*
+    =========================================================
+    HOJA MOD
+    =========================================================
+    */
+
+    const datosMOD = [
+
+        [
+
+            "Línea",
+
+            "Presentación",
+
+            "Kg presentación",
+
+            "Tipo de cálculo",
+
+            "MOD Estándar",
+
+            "MOD Personal",
+
+            "Paneras / min",
+
+            "Kg/h Teórico",
+
+            "Bases",
+
+            "Carriles",
+
+            "Minutos",
+
+            "Kg / h",
+
+            "Cumplimiento",
+
+            "Observaciones"
+
+        ]
+
+    ];
+
+
+    auditoria.mod.forEach(
+        function(item) {
+
+            datosMOD.push([
+
+                item.linea || "",
+
+                item.presentacion,
+
+                Number(item.kilos),
+
+                item.tipo === "BASES"
+                    ? "×4 bases ×4 carriles"
+                    : "×4 carriles",
+
+                Number(item.estandar),
+
+                Number(item.personal),
+
+                Number(item.panerasMin),
+
+                Number(item.teorico) || 0,
+
+                item.tipo === "BASES"
+                    ? 4
+                    : "-",
+
+                4,
+
+                60,
+
+                Number(
+                    item.kgHora.toFixed(2)
+                ),
+
+                item.cumplimiento
+
+            ]);
+
+        }
+    );
+
+
+    const wsMOD =
+        XLSX.utils.aoa_to_sheet(
+            datosMOD
+        );
+
+
+    /*
+    =========================================================
+    ANCHO COLUMNAS
+    =========================================================
+    */
+
+    wsResumen["!cols"] = [
+
+        {
+            wch: 35
+        },
+
+        {
+            wch: 60
+        }
+
+    ];
+
+
+    wsRendimiento["!cols"] = [
+
+        {
+            wch: 95
+        },
+
+        {
+            wch: 20
+        }
+
+    ];
+
+
+    wsMOD["!cols"] = [
+
+        {
+            wch: 20
+        },
+
+        {
+            wch: 18
+        },
+
+        {
+            wch: 25
+        },
+
+        {
+            wch: 18
+        },
+
+        {
+            wch: 20
+        },
+
+        {
+            wch: 18
+        },
+
+        {
+            wch: 12
+        },
+
+        {
+            wch: 12
+        },
+
+        {
+            wch: 12
+        },
+
+        {
+            wch: 15
+        },
+
+        {
+            wch: 18
+        },
+
+        {
+            wch: 40
+        }
+
+    ];
+
+
+    /*
+    =========================================================
+    CREAR LIBRO
+    =========================================================
+    */
+
+    const libro =
+        XLSX.utils.book_new();
+
+
+    XLSX.utils.book_append_sheet(
+
+        libro,
+
+        wsResumen,
+
+        "Resumen"
+
+    );
+
+
+    XLSX.utils.book_append_sheet(
+
+        libro,
+
+        wsRendimiento,
+
+        "Rendimiento"
+
+    );
+
+
+    XLSX.utils.book_append_sheet(
+
+        libro,
+
+        wsMOD,
+
+        "Cumplimiento MOD"
+
+    );
+
+
+    /*
+    =========================================================
+    NOMBRE DEL ARCHIVO
+    =========================================================
+    */
+
+    const fecha =
+        auditoria.dia ||
+        new Date()
+            .toISOString()
+            .slice(0,10);
+
+
+    const area =
+        auditoria.area
+            .replaceAll("/", "-")
+            .replaceAll(" ", "_");
+
+
+    const equipo =
+        auditoria.equipo
+            .replaceAll(" ", "_");
+
+
+    const nombreArchivo =
+
+        "Auditoria_" +
+
+        area +
+
+        "_" +
+
+        equipo +
+
+        "_" +
+
+        fecha +
+
+        ".xlsx";
+
+
+    /*
+    =========================================================
+    DESCARGAR
+    =========================================================
+    */
+
+    XLSX.writeFile(
+
+        libro,
+
+        nombreArchivo
+
+    );
+
+}
+
+
+/* =========================================================
+   EXPORTAR TODO EL HISTORIAL
+========================================================= */
+
+function exportarHistorialExcel() {
+
+    if(
+        typeof XLSX === "undefined"
+    ) {
+
+        alert(
+            "No se pudo cargar la herramienta de Excel. Verifique su conexión a Internet."
+        );
+
+        return;
+
+    }
+
+
+    const historial =
+        obtenerHistorial();
+
+
+    if(historial.length === 0) {
+
+        alert(
+            "No existen auditorías guardadas en el historial."
+        );
+
+        return;
+
+    }
+
+
+    /*
+    =========================================================
+    HOJA 1 - HISTORIAL
+    UNA FILA POR PRESENTACIÓN
+    =========================================================
+    */
+
+    const historialDatos = [
+
+        [
+
+            "ID Auditoría",
+
+            "Fecha registro",
+
+            "Día",
+
+            "Área",
+
+            "Turno",
+
+            "Equipo",
+
+            "Supervisor",
+
+            "Líder",
+
+            "Jefe",
+
+            "Checks",
+
+            "Evaluación",
+
+            "Línea",
+
+            "Presentación",
+
+            "Kg presentación",
+
+            "Tipo cálculo",
+
+            "Estándar MOD",
+
+            "Personal",
+
+            "Paneras/min",
+
+            "Kg/h",
+
+            "Cumplimiento",
+
+            "Observaciones Rendimiento",
+
+            "Observaciones Generales MOD"
+
+        ]
+
+    ];
+
+
+    historial.forEach(
+        function(aud) {
+
+            if(
+                aud.mod &&
+                aud.mod.length > 0
+            ) {
+
+                aud.mod.forEach(
+                    function(item) {
+
+                        historialDatos.push([
+
+                            aud.id || "",
+
+                            aud.fechaRegistro || "",
+
+                            aud.dia || "",
+
+                            aud.area || "",
+
+                            aud.turno || "",
+
+                            aud.equipo || "",
+
+                            aud.supervisor || "",
+
+                            aud.lider || "",
+
+                            aud.jefe || "",
+
+                            aud.checks || 0,
+
+                            aud.evaluacion || "",
+
+                            item.linea || "",
+
+                            item.presentacion || "",
+
+                            Number(item.kilos) || 0,
+
+                            item.tipo === "BASES"
+                                ? "×4 bases ×4 carriles"
+                                : "×4 carriles",
+
+                            Number(item.estandar) || 0,
+
+                            Number(item.personal) || 0,
+
+                            Number(item.panerasMin) || 0,
+
+                            Number(
+                                Number(item.kgHora || 0)
+                                .toFixed(2)
+                            ),
+
+                            item.cumplimiento || "",
+
+                            aud.observacionesRendimiento || "",
+
+                            aud.observacionesMOD || ""
+
+                        ]);
+
+                    }
+                );
+
+            }
+
+            else {
+
+                historialDatos.push([
+
+                    aud.id || "",
+
+                    aud.fechaRegistro || "",
+
+                    aud.dia || "",
+
+                    aud.area || "",
+
+                    aud.turno || "",
+
+                    aud.equipo || "",
+
+                    aud.supervisor || "",
+
+                    aud.lider || "",
+
+                    aud.jefe || "",
+
+                    aud.checks || 0,
+
+                    aud.evaluacion || "",
+
+                    "",
+
+                    "",
+
+                    "",
+
+                    "",
+
+                    "",
+
+                    "",
+
+                    "",
+
+                    "",
+
+                    "",
+
+                    aud.observacionesRendimiento || "",
+
+                    aud.observacionesMOD || ""
+
+                ]);
+
+            }
+
+        }
+    );
+
+
+    const wsHistorial =
+        XLSX.utils.aoa_to_sheet(
+            historialDatos
+        );
+
+
+    wsHistorial["!cols"] = [
+
+        {wch:18},
+        {wch:22},
+        {wch:14},
+        {wch:20},
+        {wch:12},
+        {wch:22},
+        {wch:25},
+        {wch:25},
+        {wch:25},
+        {wch:10},
+        {wch:18},
+        {wch:20},
+        {wch:18},
+        {wch:25},
+        {wch:18},
+        {wch:15},
+        {wch:15},
+        {wch:18},
+        {wch:18},
+        {wch:40},
+        {wch:60},
+        {wch:60}
+
+    ];
+
+
+    /*
+    =========================================================
+    HOJA 2 - AUDITORIAS
+    UNA FILA POR AUDITORÍA
+    =========================================================
+    */
+
+    const auditoriasDatos = [
+
+        [
+
+            "ID",
+
+            "Fecha registro",
+
+            "Día",
+
+            "Área",
+
+            "Turno",
+
+            "Equipo",
+
+            "Supervisor",
+
+            "Líder",
+
+            "Jefe",
+
+            "Checks",
+
+            "Evaluación",
+
+            "Observaciones Rendimiento",
+
+            "Observaciones MOD",
+
+            "Cantidad Presentaciones"
+
+        ]
+
+    ];
+
+
+    historial.forEach(
+        function(aud) {
+
+            auditoriasDatos.push([
+
+                aud.id || "",
+
+                aud.fechaRegistro || "",
+
+                aud.dia || "",
+
+                aud.area || "",
+
+                aud.turno || "",
+
+                aud.equipo || "",
+
+                aud.supervisor || "",
+
+                aud.lider || "",
+
+                aud.jefe || "",
+
+                aud.checks || 0,
+
+                aud.evaluacion || "",
+
+                aud.observacionesRendimiento || "",
+
+                aud.observacionesMOD || "",
+
+                aud.mod
+                    ? aud.mod.length
+                    : 0
+
+            ]);
+
+        }
+    );
+
+
+    const wsAuditorias =
+        XLSX.utils.aoa_to_sheet(
+            auditoriasDatos
+        );
+
+
+    wsAuditorias["!cols"] = [
+
+        {wch:18},
+        {wch:22},
+        {wch:14},
+        {wch:20},
+        {wch:12},
+        {wch:22},
+        {wch:25},
+        {wch:25},
+        {wch:25},
+        {wch:10},
+        {wch:18},
+        {wch:60},
+        {wch:60},
+        {wch:22}
+
+    ];
+
+
+    /*
+    =========================================================
+    HOJA 3 - RENDIMIENTO
+    =========================================================
+    */
+
+    const rendimientoDatos = [
+
+        [
+
+            "ID Auditoría",
+
+            "Día",
+
+            "Área",
+
+            "Equipo",
+
+            "Pregunta",
+
+            "Respuesta",
+
+            "Checks",
+
+            "Evaluación"
+
+        ]
+
+    ];
+
+
+    historial.forEach(
+        function(aud) {
+
+            if(
+                aud.preguntas &&
+                aud.preguntas.length > 0
+            ) {
+
+                aud.preguntas.forEach(
+                    function(p) {
+
+                        rendimientoDatos.push([
+
+                            aud.id || "",
+
+                            aud.dia || "",
+
+                            aud.area || "",
+
+                            aud.equipo || "",
+
+                            "Pregunta " + p.numero,
+
+                            p.respuesta || "",
+
+                            aud.checks || 0,
+
+                            aud.evaluacion || ""
+
+                        ]);
+
+                    }
+                );
+
+            }
+
+        }
+    );
+
+
+    const wsRendimientoHistorial =
+        XLSX.utils.aoa_to_sheet(
+            rendimientoDatos
+        );
+
+
+    wsRendimientoHistorial["!cols"] = [
+
+        {wch:18},
+        {wch:14},
+        {wch:20},
+        {wch:22},
+        {wch:18},
+        {wch:15},
+        {wch:12},
+        {wch:18}
+
+    ];
+
+
+    /*
+    =========================================================
+    HOJA 4 - MOD
+    =========================================================
+    */
+
+    const modHistorialDatos = [
+
+        [
+
+            "ID Auditoría",
+
+            "Día",
+
+            "Área",
+
+            "Equipo",
+
+            "Línea",
+
+            "Presentación",
+
+            "Kg",
+
+            "Tipo",
+
+            "Estándar MOD",
+
+            "Personal",
+
+            "Paneras/min",
+
+            "Kg/h",
+
+            "Cumplimiento"
+
+        ]
+
+    ];
+
+
+    historial.forEach(
+        function(aud) {
+
+            if(aud.mod) {
+
+                aud.mod.forEach(
+                    function(item) {
+
+                        modHistorialDatos.push([
+
+                            aud.id || "",
+
+                            aud.dia || "",
+
+                            aud.area || "",
+
+                            aud.equipo || "",
+
+                            item.linea || "",
+
+                            item.presentacion || "",
+
+                            Number(item.kilos) || 0,
+
+                            item.tipo || "",
+
+                            Number(item.estandar) || 0,
+
+                            Number(item.personal) || 0,
+
+                            Number(item.panerasMin) || 0,
+
+                            Number(
+                                Number(item.kgHora || 0)
+                                .toFixed(2)
+                            ),
+
+                            item.cumplimiento || ""
+
+                        ]);
+
+                    }
+                );
+
+            }
+
+        }
+    );
+
+
+    const wsMODHistorial =
+        XLSX.utils.aoa_to_sheet(
+            modHistorialDatos
+        );
+
+
+    wsMODHistorial["!cols"] = [
+
+        {wch:18},
+        {wch:14},
+        {wch:20},
+        {wch:22},
+        {wch:20},
+        {wch:12},
+        {wch:18},
+        {wch:18},
+        {wch:15},
+        {wch:15},
+        {wch:18},
+        {wch:18},
+        {wch:45}
+
+    ];
+
+
+    /*
+    =========================================================
+    CREAR LIBRO
+    =========================================================
+    */
+
+    const libro =
+        XLSX.utils.book_new();
+
+
+    XLSX.utils.book_append_sheet(
+
+        libro,
+
+        wsHistorial,
+
+        "Historial"
+
+    );
+
+
+    XLSX.utils.book_append_sheet(
+
+        libro,
+
+        wsAuditorias,
+
+        "Auditorías"
+
+    );
+
+
+    XLSX.utils.book_append_sheet(
+
+        libro,
+
+        wsRendimientoHistorial,
+
+        "Rendimiento"
+
+    );
+
+
+    XLSX.utils.book_append_sheet(
+
+        libro,
+
+        wsMODHistorial,
+
+        "Cumplimiento MOD"
+
+    );
+
+
+    /*
+    =========================================================
+    NOMBRE DEL ARCHIVO
+    =========================================================
+    */
+
+    const fecha =
+        new Date()
+            .toISOString()
+            .slice(0,10);
+
+
+    const nombreArchivo =
+        "Auditorias_Promarisco_Historial_" +
+        fecha +
+        ".xlsx";
+
+
+    /*
+    =========================================================
+    DESCARGAR
+    =========================================================
+    */
+
+    XLSX.writeFile(
+
+        libro,
+
+        nombreArchivo
+
+    );
+
+
+    alert(
+
+        "Excel generado correctamente.\n\n" +
+
+        "Auditorías incluidas: " +
+        historial.length
+
+    );
+
+}
+
+
+/* =========================================================
+   BORRAR HISTORIAL
+========================================================= */
+
+function borrarHistorial() {
+
+    const historial =
+        obtenerHistorial();
+
+
+    if(historial.length === 0) {
+
+        alert(
+            "No hay auditorías guardadas para borrar."
+        );
+
+        return;
+
+    }
+
+
+    const confirmar =
+        confirm(
+
+            "¿Está seguro de borrar TODO el historial?\n\n" +
+
+            "Se eliminarán " +
+            historial.length +
+            " auditorías guardadas en este navegador.\n\n" +
+
+            "Esta acción no se puede deshacer."
+
+        );
+
+
+    if(!confirmar) {
+
+        return;
+
+    }
+
+
+    localStorage.removeItem(
+        CLAVE_HISTORIAL
+    );
+
+
+    actualizarContadorHistorial();
+
+
+    alert(
+        "El historial ha sido borrado correctamente."
+    );
+
+}
+
+
+/* =========================================================
+   NUEVA AUDITORIA
+========================================================= */
+
+function nuevaAuditoria() {
+
+    const confirmar =
+        confirm(
+
+            "¿Desea iniciar una nueva auditoría?\n\n" +
+
+            "La auditoría actual ya fue guardada en el historial."
+
+        );
+
+
+    if(!confirmar) {
+
+        return;
+
+    }
+
+
+    location.reload();
+
+}
+
+
+/* =========================================================
+   FECHA ACTUAL
+========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+
+        const fecha =
+            new Date();
+
+
+        const yyyy =
+            fecha.getFullYear();
+
+
+        const mm =
+            String(
+                fecha.getMonth() + 1
+            ).padStart(
+                2,
+                "0"
+            );
+
+
+        const dd =
+            String(
+                fecha.getDate()
+            ).padStart(
+                2,
+                "0"
+            );
+
+
+        document
+            .getElementById("dia")
+            .value =
+
+            yyyy +
+            "-" +
+            mm +
+            "-" +
+            dd;
+
+
+        /*
+        Actualizar contador
+        */
+
+        actualizarContadorHistorial();
+
+    }
+);
+
+/* =========================================================
+   MOD POR ÁREA - CORRECCIÓN FINAL
+   Cada área tiene su propia pantalla de cumplimiento de MOD.
+========================================================= */
+
+const MOD_FRIO_PRESENTACIONES = [
+    {value:"coral4", nombre:"Coral 4 lb", kilos:1.814, mod:13, teorico:""},
+    {value:"sunday4", nombre:"Sunday 4 lb", kilos:1.814, mod:13, teorico:""},
+    {value:"sm4", nombre:"SM 4 lb", kilos:1.814, mod:13, teorico:""},
+    {value:"pescanova10x14", nombre:"Pescanova 10x1,4 kg", kilos:1.4, mod:13, teorico:""},
+    {value:"riazor10x17", nombre:"Riazor 10x1,7 kg", kilos:1.7, mod:13, teorico:""}
+];
+
+/* =========================================================
+   RECEPCIÓN
+   DÍA = PESCA VIVA / 31
+   NOCHE = RECEPCIÓN DE BINES / 38
+========================================================= */
+const MOD_RECEPCION = {
+    dia: {turno:"DIA", estandar:"PESCA VIVA", valor:31},
+    noche: {turno:"NOCHE", estandar:"RECEPCIÓN DE BINES", valor:38}
+};
+
+/* =========================================================
+   DESCABEZADO
+   DÍA = MÓDULO 1 / 65 y MÓDULO 2 / 65
+========================================================= */
+const MOD_DESCABEZADO = {
+    modulo1:65,
+    modulo2:65
+};
+
+function crearTablaRecepcionMOD(){
+    const wrap=document.getElementById("contenedorMODArea");
+    wrap.innerHTML=`
+        <h2>📦 CUMPLIMIENTO DE MOD — RECEPCIÓN</h2>
+        <div class="tabla-wrapper">
+        <table id="tablaMODRecepcion">
+            <thead><tr>
+                <th>TURNO</th>
+                <th>ESTÁNDAR</th>
+                <th>PERSONAL</th>
+                <th>CUMPLIMIENTO</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td><strong>DIA</strong></td>
+                    <td>
+                        <select id="estandarRecepcionDia" onchange="cambioEstandarRecepcion('dia')">
+                            <option value="">Seleccione...</option>
+                            <option value="PESCA VIVA" data-estandar="31">PESCA VIVA</option>
+                        </select>
+                        <div class="mod-referencia">Estándar: <strong>31</strong> personas</div>
+                    </td>
+                    <td><input id="personalRecepcionDia" type="number" min="0" step="1" placeholder="Personal"></td>
+                    <td><div id="cumplimientoRecepcionDia" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
+                </tr>
+                <tr>
+                    <td><strong>NOCHE</strong></td>
+                    <td>
+                        <select id="estandarRecepcionNoche" onchange="cambioEstandarRecepcion('noche')">
+                            <option value="">Seleccione...</option>
+                            <option value="RECEPCIÓN DE BINES" data-estandar="38">RECEPCIÓN DE BINES</option>
+                        </select>
+                        <div class="mod-referencia">Estándar: <strong>38</strong> personas</div>
+                    </td>
+                    <td><input id="personalRecepcionNoche" type="number" min="0" step="1" placeholder="Personal"></td>
+                    <td><div id="cumplimientoRecepcionNoche" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
+                </tr>
+            </tbody>
+        </table>
+        </div>`;
+
+    document.getElementById("personalRecepcionDia").addEventListener("input",()=>actualizarCumplimientoRecepcion("dia"));
+    document.getElementById("personalRecepcionNoche").addEventListener("input",()=>actualizarCumplimientoRecepcion("noche"));
+}
+
+function cambioEstandarRecepcion(turno){
+    actualizarCumplimientoRecepcion(turno);
+}
+
+function actualizarCumplimientoRecepcion(turno){
+    const sufijo=turno==='dia'?'Dia':'Noche';
+    const select=document.getElementById('estandarRecepcion'+sufijo);
+    const input=document.getElementById('personalRecepcion'+sufijo);
+    const box=document.getElementById('cumplimientoRecepcion'+sufijo);
+    if(!select||!input||!box)return;
+    const option=select.options[select.selectedIndex];
+    const estandar=Number(option?.dataset?.estandar||0);
+    const personal=Number(input.value||0);
+    if(!select.value||!personal||!estandar){
+        box.textContent='Pendiente';
+        box.className='cumplimiento-auto pendiente-auto';
+    }else if(personal>=estandar){
+        box.textContent='✓ CUMPLE';
+        box.className='cumplimiento-auto cumple-auto';
+    }else{
+        box.textContent='✕ NO CUMPLE';
+        box.className='cumplimiento-auto no-cumple-auto';
+    }
+}
+
+function crearTablaDescabezadoMOD(){
+    const wrap=document.getElementById("contenedorMODArea");
+    wrap.innerHTML=`
+        <h2>🦐 CUMPLIMIENTO DE MOD — DESCABEZADO</h2>
+        <div class="tabla-wrapper">
+        <table id="tablaMODDescabezado">
+            <thead><tr>
+                <th>TURNO</th>
+                <th>CONFIGURACIÓN / ESTÁNDAR</th>
+                <th>PERSONAL</th>
+                <th>CUMPLIMIENTO</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td><strong>DIA</strong></td>
+                    <td>
+                        <select id="estandarDescabezado1" onchange="actualizarCumplimientoDescabezado(1)">
+                            <option value="">Seleccione...</option>
+                            <option value="MÓDULO 1" data-estandar="65">MÓDULO 1</option>
+                            <option value="MÓDULO 2" data-estandar="65">MÓDULO 2</option>
+                        </select>
+                        <div class="mod-referencia">Estándar: <strong>65</strong> personas</div>
+                    </td>
+                    <td><input id="personalDescabezado1" type="number" min="0" step="1" placeholder="Personal"></td>
+                    <td><div id="cumplimientoDescabezado1" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
+                </tr>
+                <tr>
+                    <td><strong>DIA</strong></td>
+                    <td>
+                        <select id="estandarDescabezado2" onchange="actualizarCumplimientoDescabezado(2)">
+                            <option value="">Seleccione...</option>
+                            <option value="MÓDULO 1" data-estandar="65">MÓDULO 1</option>
+                            <option value="MÓDULO 2" data-estandar="65">MÓDULO 2</option>
+                        </select>
+                        <div class="mod-referencia">Estándar: <strong>65</strong> personas</div>
+                    </td>
+                    <td><input id="personalDescabezado2" type="number" min="0" step="1" placeholder="Personal"></td>
+                    <td><div id="cumplimientoDescabezado2" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
+                </tr>
+            </tbody>
+        </table>
+        </div>`;
+    document.getElementById("personalDescabezado1").addEventListener("input",()=>actualizarCumplimientoDescabezado(1));
+    document.getElementById("personalDescabezado2").addEventListener("input",()=>actualizarCumplimientoDescabezado(2));
+}
+
+function actualizarCumplimientoDescabezado(n){
+    const select=document.getElementById('estandarDescabezado'+n);
+    const input=document.getElementById('personalDescabezado'+n);
+    const box=document.getElementById('cumplimientoDescabezado'+n);
+    if(!select||!input||!box)return;
+    const option=select.options[select.selectedIndex];
+    const estandar=Number(option?.dataset?.estandar||0);
+    const personal=Number(input.value||0);
+    if(!select.value||!personal||!estandar){
+        box.textContent='Pendiente'; box.className='cumplimiento-auto pendiente-auto';
+    }else if(personal>=estandar){
+        box.textContent='✓ CUMPLE'; box.className='cumplimiento-auto cumple-auto';
+    }else{
+        box.textContent='✕ NO CUMPLE'; box.className='cumplimiento-auto no-cumple-auto';
+    }
+}
+
+function actualizarCumplimientoSimple(inputId,resultadoId,estandar){
+    const personal=Number(document.getElementById(inputId)?.value||0);
+    const box=document.getElementById(resultadoId);
+    if(!personal){
+        box.textContent="Pendiente";
+        box.className="cumplimiento-auto pendiente-auto";
+    }else if(personal>=estandar){
+        box.textContent="✓ CUMPLE";
+        box.className="cumplimiento-auto cumple-auto";
+    }else{
+        box.textContent="✕ NO CUMPLE";
+        box.className="cumplimiento-auto no-cumple-auto";
+    }
+}
+
+function renderMODRecepcion(){
+    crearTablaRecepcionMOD();
+}
+
+function renderMODDescabezado(){
+    crearTablaDescabezadoMOD();
+}
+
+/* =========================================================
+   CONGELACIÓN
+   Una sola fila. El equipo ya viene seleccionado desde Datos.
+   NO hay botón Agregar presentación.
+========================================================= */
+function renderMODCongelacion(){
+    const wrap=document.getElementById("contenedorMODArea");
+    const equipo=auditoria.equipo||"";
+    wrap.innerHTML=`
+      <h2>❄️ CUMPLIMIENTO DE MOD — CONGELACIÓN</h2>
+      <div class="tabla-wrapper">
+      <table id="tablaMOD"><thead><tr>
+        <th>LÍNEA / EQUIPO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th><th>MOD PERSONAL</th>
+        <th>PANERAS / MIN</th><th>Kg/h TEÓRICO</th><th>Kg/h CALCULADO</th><th>CUMPLIMIENTO</th>
+      </tr></thead><tbody id="cuerpoMOD"></tbody></table></div>`;
+    agregarPresentacionFrio();
+}
+
+function agregarPresentacionFrio(){
+    const tbody=document.getElementById("cuerpoMOD");
+    if(!tbody || tbody.children.length>0)return;
+    const id=1;
+    const fila=document.createElement("tr");
+    fila.id="filaMOD_1";
+    const equipos=["LC1","LC2","LC3","LC4","FRIGOESCANDIA","FRIGO-TUNEL"];
+    fila.innerHTML=`
+      <td><select class="lineaCongelacion" onchange="cargarPresentacionesFilaFrio(${id})">
+        <option value="">Seleccione...</option>${equipos.map(x=>`<option value="${x}">${x}</option>`).join("")}
+      </select></td>
+      <td><select class="presentacion" onchange="calcularKgHoraFrio(${id})"><option value="">Seleccione equipo primero...</option></select></td>
+      <td><div class="mod-estandar-auto" id="modEstandar_${id}">—<small>Seleccione presentación</small></div></td>
+      <td><input class="personal" type="number" min="0" step="1" placeholder="Personas"></td>
+      <td><input class="bases" type="number" min="0" step="0.01" placeholder="Paneras/min" oninput="calcularKgHoraFrio(${id})"></td>
+      <td><div class="calculo-kgh" id="teorico_${id}">—<small>Seleccione presentación</small></div></td>
+      <td><div class="calculo-kgh" id="kgh_${id}">0.00 Kg/h<small>Seleccione presentación</small></div></td>
+      <td><div class="cumplimiento-auto pendiente-auto" id="cumplimiento_${id}">Pendiente</div></td>`;
+    tbody.appendChild(fila);
+    const sel=fila.querySelector(".lineaCongelacion");
+    if(equipos.includes(equipo)){
+        sel.value=equipo;
+        cargarPresentacionesFilaFrio(id);
+    }
+}
+
+function cargarPresentacionesFilaFrio(id){
+    const fila=document.getElementById("filaMOD_"+id); if(!fila)return;
+    const linea=fila.querySelector(".lineaCongelacion").value;
+    const select=fila.querySelector(".presentacion");
+    select.innerHTML='<option value="">Seleccione...</option>';
+    let lista=[];
+    if(linea==="FRIGOESCANDIA" || linea==="FRIGO-TUNEL") lista=MOD_FRIO_PRESENTACIONES;
+    else lista=PRESENTACIONES_POR_LC[linea] || [];
+    lista.forEach(item=>{
+      const o=document.createElement("option");
+      o.value=item.value;
+      o.textContent=item.nombre;
+      o.dataset.nombre=item.nombre;
+      o.dataset.kilos=item.kilos;
+      o.dataset.tipo=item.tipo||"CARRILES";
+      o.dataset.teorico=item.teorico==null?"":item.teorico;
+      o.dataset.mod=item.mod==null?"":item.mod;
+      select.appendChild(o);
+    });
+    calcularKgHoraFrio(id);
+}
+
+function calcularKgHoraFrio(id){
+    const fila=document.getElementById("filaMOD_"+id); if(!fila)return;
+    const sel=fila.querySelector(".presentacion");
+    const o=sel.options[sel.selectedIndex];
+    const pan=parseFloat(fila.querySelector(".bases").value);
+    const modBox=document.getElementById("modEstandar_"+id);
+    const te=document.getElementById("teorico_"+id);
+    const kg=document.getElementById("kgh_"+id);
+    const cu=document.getElementById("cumplimiento_"+id);
+    if(!o || !o.value){
+        modBox.innerHTML='—<small>Seleccione presentación</small>';
+        te.innerHTML='—<small>Seleccione presentación</small>';
+        kg.innerHTML='0.00 Kg/h<small>Seleccione presentación</small>';
+        cu.textContent='Pendiente';cu.className='cumplimiento-auto pendiente-auto';return;
+    }
+    const kilos=Number(o.dataset.kilos);
+    const teorico=o.dataset.teorico!==""?Number(o.dataset.teorico):null;
+    const mod=o.dataset.mod!==""?Number(o.dataset.mod):null;
+    modBox.innerHTML=mod!=null?`${mod} personas<small>MOD Estándar</small>`:'—<small>Sin estándar</small>';
+    te.innerHTML=teorico!=null?`${formatearNumero(teorico)} Kg/h<small>Valor teórico</small>`:'—<small>Sin valor teórico</small>';
+    if(!Number.isFinite(pan)||pan<=0){
+        kg.innerHTML='0.00 Kg/h<small>Ingrese paneras/min</small>';
+        cu.textContent='Pendiente';cu.className='cumplimiento-auto pendiente-auto';return;
+    }
+    const tipo=o.dataset.tipo||"CARRILES";
+    const kgHora=tipo==="BASES" ? pan*4*4*60*kilos : pan*4*60*kilos;
+    kg.innerHTML=`${formatearNumero(kgHora)} Kg/h<small>${tipo==="BASES"?`${pan} Paneras × 4 Bases × 4 Carriles × 60 Min × ${kilos} Kg`:`${pan} Paneras × 4 Carriles × 60 Min × ${kilos} Kg`}</small>`;
+    if(teorico==null){cu.textContent='Pendiente';cu.className='cumplimiento-auto pendiente-auto';}
+    else if(kgHora>=teorico){cu.textContent='✓ CUMPLE';cu.className='cumplimiento-auto cumple-auto';}
+    else{cu.textContent='✕ NO CUMPLE';cu.className='cumplimiento-auto no-cumple-auto';}
+}
+
+/* =========================================================
+   CLASIFICADORA
+   Una sola fila. La clasificadora seleccionada determina
+   automáticamente el estándar correspondiente.
+   NO hay botón Agregar presentación.
+========================================================= */
+function renderMODClasificadora(){
+    const wrap=document.getElementById("contenedorMODArea");
+    wrap.innerHTML=`
+      <h2>⚙️ CUMPLIMIENTO DE MOD — CLASIFICADORA</h2>
+      <div class="tabla-wrapper"><table id="tablaMODClasif"><thead><tr>
+        <th>CLASIFICADORA</th><th>TIPO DE PROCESO</th><th>TIPO DE ENVASE</th><th>PESO</th>
+        <th>MOD ESTÁNDAR AUTOMÁTICA</th><th>MOD PERSONAL</th><th>PANERAS/MIN</th><th>Kg/h TEÓRICO</th><th>Kg/h CALCULADO</th><th>CUMPLIMIENTO</th>
+      </tr></thead><tbody><tr>
+        <td>
+          <select id="clasifSel" onchange="actualizarMODPersonalClasif(); actualizarPesosClasif(); cargarEstandarClasif()">
+            <option value="">Seleccione...</option>
+            ${Array.from({length:9},(_,i)=>`<option value="${i+1}">Clasificadora ${i+1}</option>`).join("")}
+          </select>
+        </td>
+        <td>
+          <select id="tipoProcesoClasif" onchange="actualizarPesosClasif(); cargarEstandarClasif()">
+            <option value="CC">CC</option>
+            <option value="SC">SC</option>
+          </select>
+        </td>
+        <td>
+          <select id="envaseClasif" onchange="actualizarPesosClasif(); cargarEstandarClasif()">
+            <option value="BASE">BASE</option>
+            <option value="CAJA AUTOARMABLE">CAJA AUTOARMABLE</option>
+            <option value="PANERA">PANERA</option>
+            <option value="TARRINA">TARRINA</option>
+            <option value="BIN">BIN</option>
+          </select>
+        </td>
+        <td>
+          <select id="pesoClasif" onchange="cargarEstandarClasif()">
+            <option value="">Seleccione peso...</option>
+          </select>
+        </td>
+        <td><div class="mod-estandar-auto" id="modClasifAuto">—<small>Seleccione datos</small></div></td>
+        <td>
+          <input id="personalClasif" type="number" min="0" step="1" placeholder="Automático" readonly
+                 style="background:#f1f1f1;cursor:not-allowed;">
+        </td>
+        <td>
+          <input id="panerasClasif" type="number" min="0" step="0.01" placeholder="Paneras/min" oninput="calcularClasif()">
+        </td>
+        <td><div class="calculo-kgh" id="teoricoClasif">—<small>Seleccione datos</small></div></td>
+        <td><div class="calculo-kgh" id="kghClasif">0.00 Kg/h</div></td>
+        <td><div class="cumplimiento-auto pendiente-auto" id="cumplimientoClasif">Pendiente</div></td>
+      </tr></tbody></table></div>`;
+
+    actualizarPesosClasif();
+
+    if(auditoria.equipo && /^Clasificadora [1-9]$/.test(auditoria.equipo)){
+        document.getElementById("clasifSel").value=auditoria.equipo.replace("Clasificadora ","");
+        actualizarMODPersonalClasif();
+        actualizarPesosClasif();
+    }
+
+    cargarEstandarClasif();
+}
+
+/* =========================================================
+   MOD PERSONAL AUTOMÁTICA POR CLASIFICADORA
+========================================================= */
+function actualizarMODPersonalClasif(){
+    const c=Number(document.getElementById("clasifSel")?.value||0);
+    const personalPorClasif={
+        1:24,
+        2:25,
+        3:24,
+        4:27,
+        5:24,
+        6:27,
+        7:27,
+        8:27,
+        9:27
+    };
+
+    const input=document.getElementById("personalClasif");
+    if(!input)return;
+
+    input.value=personalPorClasif[c] ?? "";
+}
+
+/* =========================================================
+   PESOS DISPONIBLES SEGÚN PROCESO + ENVASE
+========================================================= */
+function actualizarPesosClasif(){
+    const selectPeso=document.getElementById("pesoClasif");
+    const proceso=document.getElementById("tipoProcesoClasif")?.value||"CC";
+    const envase=document.getElementById("envaseClasif")?.value||"BASE";
+
+    if(!selectPeso)return;
+
+    const pesoAnterior=selectPeso.value;
+
+    const pesos=[...new Set(
+        ESTANDARES_CLASIF
+            .filter(x=>x.p===proceso && x.e===envase)
+            .map(x=>Number(x.w))
+            .filter(x=>Number.isFinite(x))
+    )].sort((a,b)=>a-b);
+
+    selectPeso.innerHTML=`<option value="">Seleccione peso...</option>`;
+
+    pesos.forEach(peso=>{
+        const option=document.createElement("option");
+        option.value=String(peso);
+        option.textContent=String(peso).replace(".",",")+" Kg";
+        selectPeso.appendChild(option);
+    });
+
+    if(pesos.includes(Number(pesoAnterior))){
+        selectPeso.value=pesoAnterior;
+    }
+
+    cargarEstandarClasif();
+}
+
+function normalizarPeso(v){
+    return Number(String(v).replace(",","."));
+}
+
+/* =========================================================
+   CARGAR ESTÁNDAR DE CLASIFICADORA
+========================================================= */
+function cargarEstandarClasif(){
+    const c=Number(document.getElementById("clasifSel")?.value||0);
+    const p=document.getElementById("tipoProcesoClasif")?.value||"CC";
+    const e=document.getElementById("envaseClasif")?.value||"BASE";
+    const w=normalizarPeso(document.getElementById("pesoClasif")?.value||"");
+
+    const box=document.getElementById("modClasifAuto");
+    const teorico=document.getElementById("teoricoClasif");
+
+    if(!box)return;
+
+    if(!c||!Number.isFinite(w)){
+        box.innerHTML='—<small>Seleccione clasificadora y peso</small>';
+        if(teorico)teorico.innerHTML='—<small>Seleccione datos</small>';
+        calcularClasif();
+        return;
+    }
+
+    const item=ESTANDARES_CLASIF.find(
+        x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011
+    );
+
+    if(!item || !item.v[c-1]){
+        box.innerHTML='No registrado<small>Estándar no encontrado</small>';
+        if(teorico)teorico.innerHTML='—<small>Sin estándar</small>';
+        calcularClasif();
+        return;
+    }
+
+    const val=Number(item.v[c-1]);
+
+    box.innerHTML=`${formatearNumero(val)} kg/h<small>Estándar automática</small>`;
+
+    if(teorico){
+        teorico.innerHTML=`${formatearNumero(val)} Kg/h<small>Valor estándar</small>`;
+    }
+
+    calcularClasif();
+}
+
+/* =========================================================
+   CÁLCULO Kg/h CLASIFICADORA
+========================================================= */
+function calcularClasif(){
+    const pan=Number(document.getElementById("panerasClasif")?.value||0);
+    const c=Number(document.getElementById("clasifSel")?.value||0);
+    const p=document.getElementById("tipoProcesoClasif")?.value||"CC";
+    const e=document.getElementById("envaseClasif")?.value||"BASE";
+    const w=normalizarPeso(document.getElementById("pesoClasif")?.value||"");
+
+    const item=ESTANDARES_CLASIF.find(
+        x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011
+    );
+
+    const est=item&&c?Number(item.v[c-1]):null;
+
+    const out=document.getElementById("kghClasif");
+    const cu=document.getElementById("cumplimientoClasif");
+
+    if(!out||!cu)return;
+
+    if(!est||!pan||!w){
+        out.innerHTML=`0.00 Kg/h<small>Ingrese paneras/min</small>`;
+        cu.textContent='Pendiente';
+        cu.className='cumplimiento-auto pendiente-auto';
+        return;
+    }
+
+    const kg=pan*4*60*w;
+
+    out.innerHTML=`${formatearNumero(kg)} Kg/h<small>${pan} Paneras × 4 Carriles × 60 × ${w} Kg</small>`;
+
+    if(kg>=est){
+        cu.textContent='✓ CUMPLE';
+        cu.className='cumplimiento-auto cumple-auto';
+    }else{
+        cu.textContent='✕ NO CUMPLE';
+        cu.className='cumplimiento-auto no-cumple-auto';
+    }
+}
+
+/* =========================================================
+   NAVEGACIÓN MOD
+========================================================= */
+function irMOD(){
+    for(let i=1;i<=7;i++){
+        if(!document.querySelector('input[name="p'+i+'"]:checked')){
+            alert('Debe responder todas las preguntas de Rendimiento.');
+            return;
+        }
+    }
+    auditoria.observacionesRendimiento=document.getElementById("observacionesRendimiento").value.trim();
+    if(areaActual==="CONGELACION")renderMODCongelacion();
+    else if(areaActual==="CLASIFICADORA")renderMODClasificadora();
+    else if(areaActual==="RECEPCION")renderMODRecepcion();
+    else if(areaActual==="DESCABEZADO")renderMODDescabezado();
+    else renderMODRecepcion();
+    mostrarPantalla("pantallaMOD");
+}
+
+/* =========================================================
+   FINALIZAR — GUARDA LA ESTRUCTURA CORRECTA SEGÚN ÁREA
+========================================================= */
+function finalizar(){
+    if(auditoriaGuardada){cargarResumen();mostrarPantalla("pantallaFinal");return;}
+    const mod=[];
+
+    if(areaActual==="RECEPCION"){
+        const sd=document.getElementById("estandarRecepcionDia");
+        const sn=document.getElementById("estandarRecepcionNoche");
+        const dia=document.getElementById("personalRecepcionDia")?.value||"";
+        const noche=document.getElementById("personalRecepcionNoche")?.value||"";
+        const od=sd?.options[sd.selectedIndex];
+        const on=sn?.options[sn.selectedIndex];
+        const ed=Number(od?.dataset?.estandar||0);
+        const en=Number(on?.dataset?.estandar||0);
+        if(!sd?.value||!sn?.value||!dia||!noche){alert("Seleccione el estándar y complete el personal de DIA y NOCHE en Recepción.");return;}
+        mod.push({linea:"DIA",presentacion:sd.value,kilos:0,tipo:"MOD",estandar:String(ed),teorico:"",personal:String(dia),panerasMin:"",kgHora:0,cumplimiento:Number(dia)>=ed?"Cumple":"No Cumple"});
+        mod.push({linea:"NOCHE",presentacion:sn.value,kilos:0,tipo:"MOD",estandar:String(en),teorico:"",personal:String(noche),panerasMin:"",kgHora:0,cumplimiento:Number(noche)>=en?"Cumple":"No Cumple"});
+    }
+    else if(areaActual==="DESCABEZADO"){
+        const s1=document.getElementById("estandarDescabezado1");
+        const s2=document.getElementById("estandarDescabezado2");
+        const p1=document.getElementById("personalDescabezado1")?.value||"";
+        const p2=document.getElementById("personalDescabezado2")?.value||"";
+        const o1=s1?.options[s1.selectedIndex];
+        const o2=s2?.options[s2.selectedIndex];
+        const e1=Number(o1?.dataset?.estandar||0);
+        const e2=Number(o2?.dataset?.estandar||0);
+        if(!s1?.value||!s2?.value||!p1||!p2){alert("Seleccione la configuración y complete el personal de los dos módulos de Descabezado.");return;}
+        mod.push({linea:"DIA",presentacion:s1.value,kilos:0,tipo:"MOD",estandar:String(e1),teorico:"",personal:String(p1),panerasMin:"",kgHora:0,cumplimiento:Number(p1)>=e1?"Cumple":"No Cumple"});
+        mod.push({linea:"DIA",presentacion:s2.value,kilos:0,tipo:"MOD",estandar:String(e2),teorico:"",personal:String(p2),panerasMin:"",kgHora:0,cumplimiento:Number(p2)>=e2?"Cumple":"No Cumple"});
+    }
+    else if(areaActual==="CLASIFICADORA"){
+        const c=document.getElementById("clasifSel")?.value;
+        const p=document.getElementById("tipoProcesoClasif")?.value;
+        const e=document.getElementById("envaseClasif")?.value;
+        const w=normalizarPeso(document.getElementById("pesoClasif")?.value||"");
+        const personal=document.getElementById("personalClasif")?.value||"";
+        const pan=document.getElementById("panerasClasif")?.value||"";
+        const item=ESTANDARES_CLASIF.find(x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011);
+        const est=item&&c?Number(item.v[Number(c)-1]):null;
+        if(!c||!item||!est||!personal||!pan){alert("Complete clasificadora, proceso, envase, peso, personal y paneras/min.");return;}
+        const kg=Number(pan)*4*60*w;
+        mod.push({linea:"Clasificadora "+c,presentacion:p+" / "+e+" / "+String(w).replace(".",","),kilos:w,tipo:"CARRILES",estandar:String(est),teorico:String(est),personal:String(personal),panerasMin:String(pan),kgHora:kg,cumplimiento:kg>=est?"Cumple":"No Cumple"});
+    }
+    else if(areaActual==="CONGELACION"){
+        const filas=document.querySelectorAll("#cuerpoMOD tr");
+        if(!filas.length){alert("No existe la tabla de Congelación.");return;}
+        filas.forEach(fila=>{
+            const sel=fila.querySelector(".presentacion");
+            const o=sel?.options[sel.selectedIndex];
+            const personal=fila.querySelector(".personal")?.value||"";
+            const pan=fila.querySelector(".bases")?.value||"";
+            const linea=fila.querySelector(".lineaCongelacion")?.value||"";
+            if(!o||!o.value||!personal||!pan)return;
+            const kilos=Number(o.dataset.kilos);
+            const tipo=o.dataset.tipo||"CARRILES";
+            const est=o.dataset.mod||"";
+            const teor=o.dataset.teorico||"";
+            const kg=tipo==="BASES"?Number(pan)*4*4*60*kilos:Number(pan)*4*60*kilos;
+            const auto=fila.querySelector(".cumplimiento-auto");
+            const cump=auto?.textContent.includes("CUMPLE")&&!auto?.textContent.includes("NO CUMPLE")?"Cumple":auto?.textContent.includes("NO CUMPLE")?"No Cumple":"Pendiente";
+            mod.push({linea,presentacion:o.dataset.nombre,kilos,tipo,estandar:est,teorico:teor,personal:String(personal),panerasMin:String(pan),kgHora:kg,cumplimiento:cump});
+        });
+        if(!mod.length){alert("Complete presentación, MOD personal y paneras/min en Congelación.");return;}
+    }
+    else{
+        alert("Área no configurada para cumplimiento de MOD.");return;
+    }
+
+    auditoria.id=Date.now().toString();
+    auditoria.fechaRegistro=new Date().toLocaleString("es-EC");
+    auditoria.mod=mod;
+    auditoria.observacionesMOD=document.getElementById("observacionesMOD").value.trim();
+    auditoria.preguntas=[];
+    for(let i=1;i<=7;i++)auditoria.preguntas.push({numero:i,respuesta:obtenerRespuesta("p"+i)});
+    guardarAuditoria();
+    auditoriaGuardada=true;
+    cargarResumen();
+    mostrarPantalla("pantallaFinal");
+    actualizarContadorHistorial();
+}
+
+
+const ESTANDARES_CLASIF = [
+  {p:"CC",e:"BASE",w:1.92,v:[1713,1843,2188,1735,1884,1735,2188,1562,1843]},
+  {p:"CC",e:"BASE",w:3.81,v:[2971,2286,2286,2971,2818,2971,2818,2818,2514]},
+  {p:"CC",e:"BASE",w:1.94,v:[1900,1778,2120,1778,2120,1778,2061,2061,1735]},
+  {p:"CC",e:"BASE",w:3.86,v:[3850,2743,2818,2971,2818,2971,2818,2818,2818]},
+  {p:"CC",e:"BASE",w:5.76,v:[2741,2604,2604,2604,2604,2604,2604,2604,2604]},
+  {p:"CC",e:"BASE",w:1.9,v:[3175,1778,3600,2175,2061,2175,2061,2061,2061]},
+  {p:"CC",e:"BASE",w:2.92,v:[3990,2177,2177,2881,2881,2177,2177,2177,2177]},
+  {p:"CC",e:"BASE",w:2.85,v:[1881,2177,2177,2881,2881,2177,2177,2177,2177]},
+  {p:"CC",e:"BASE",w:1.87,v:[3175,1850,2061,1778,2061,1778,2061,2061,2061]},
+  {p:"CC",e:"BASE",w:1,v:[850,850,850,850,850,850,850,850,850]},
+  {p:"SC",e:"CAJA AUTOARMABLE",w:1.76,v:[1053,800,841,1077,841,1077,841,841,841]},
+  {p:"SC",e:"CAJA AUTOARMABLE",w:1.81,v:[1077,707,841,707,841,707,841,841,841]},
+  {p:"CC",e:"CAJA AUTOARMABLE",w:1.4,v:[1150,1840,1120,1400,1120,1400,1120,900,1120]},
+  {p:"CC",e:"CAJA AUTOARMABLE",w:1.46,v:[1150,1840,1120,1840,1120,1840,1120,1120,1120]},
+  {p:"SC",e:"CAJA AUTOARMABLE",w:1.8,v:[1077,900,800,800,650,800,820,816,816]},
+  {p:"SC",e:"CAJA AUTOARMABLE",w:1.75,v:[1053,707,841,707,841,707,841,841,841]},
+  {p:"SC",e:"CAJA AUTOARMABLE",w:1.7,v:[1150,840,1120,840,1120,840,1120,1120,1120]},
+  {p:"SC",e:"CAJA AUTOARMABLE",w:1.65,v:[1053,554,822,554,822,554,822,822,822]},
+  {p:"CC",e:"PANERA",w:5.69,v:[3025,2626,2624,2531,2531,2531,2675,2624,1813]},
+  {p:"CC",e:"PANERA",w:5.76,v:[3850,2604,2604,2604,2604,2604,2604,2604,2604]},
+  {p:"CC",e:"PANERA",w:4.85,v:[3850,2340,2818,2340,3120,2340,3120,3120,3120]},
+  {p:"CC",e:"PANERA",w:8.75,v:[3600,3600,3000,3600,3000,3600,2700,3600,3000]},
+  {p:"CC",e:"TARRINA",w:1.76,v:[2722,1722,2296,1722,2296,1722,2096,822,1735]},
+  {p:"CC",e:"TARRINA",w:1.81,v:[2722,1722,2296,1722,2296,1722,2096,2296,2296]},
+  {p:"CC",e:"TARRINA",w:1.8,v:[3020,1850,2420,1815,2420,1815,2426,2426,2420]},
+  {p:"CC",e:"TARRINA",w:1.75,v:[2722,1850,2296,1722,2296,1722,1700,2420,2420]},
+  {p:"CC",e:"TARRINA",w:1.7,v:[2722,1722,2296,1722,2296,1722,2296,2296,2296]},
+  {p:"CC",e:"TARRINA",w:1.65,v:[1150,1722,2296,1722,2296,1722,2296,2296,2296]},
+  {p:"CC",e:"TARRINA",w:1.92,v:[1928,1843,1928,1928,2457,1928,2188,1843,1843]},
+  {p:"CC",e:"TARRINA",w:1.61,v:[2722,1762,1850,1722,1900,1722,2296,2296,2296]},
+  {p:"CC",e:"TARRINA",w:1.9,v:[3020,1778,2061,1778,2061,1778,2061,2061,2061]},
+  {p:"SC",e:"TARRINA",w:1.76,v:[1053,874,874,1053,822,1053,822,822,822]},
+  {p:"CC",e:"BIN",w:380,v:[2706,0,0,0,0,0,0,0,0]},
+  {p:"CC",e:"TARRINA",w:1.71,v:[2722,1722,800,1722,2296,1722,2296,2296,2296]},
+  {p:"CC",e:"PANERA",w:4.86,v:[3500,3340,3818,3340,4120,3340,2900,4120,3500]},
+  {p:"CC",e:"CAJA AUTOARMABLE",w:1.36,v:[1150,1000,1120,1840,1120,1840,1120,1120,1120]},
+  {p:"CC",e:"BASE",w:3.75,v:[4215,2402,3106,2402,3106,2402,3106,3106,3106]},
+  {p:"CC",e:"BASE",w:5.64,v:[3079,2942,2942,2942,2942,2942,2942,2942,2942]},
+  {p:"CC",e:"BASE",w:3.8,v:[4443,2630,3334,2630,3334,2630,3334,3334,3334]},
+  {p:"CC",e:"BASE",w:3.88,v:[3850,2743,2818,2971,2818,2971,2818,2818,2818]},
+  {p:"CC",e:"PANERA",w:11.62,v:[2219,2320,2306,3112,2306,3112,2306,2306,2306]},
+  {p:"CC",e:"PANERA",w:11.5,v:[3395,2834,3307,3629,3734,3183,3208,3105,3105]},
+  {p:"CC",e:"PANERA",w:11.62,v:[2219,2320,2306,3112,2306,3112,2306,2306,2306]},
+  {p:"CC",e:"PANERA",w:11.83,v:[2990,2836,3400,2406,2406,2406,2839,2306,1758]},
+  {p:"CC",e:"PANERA",w:5.78,v:[3850,2604,2604,2604,2604,2604,2604,2604,2604]},
+  {p:"CC",e:"PANERA",w:9.65,v:[3964,3381,3463,3714,3537,3127,3308,3308,2670]},
+  {p:"SC",e:"PANERA",w:11.59,v:[990,1070,1291,733,1241,733,700,760,700]},
+  {p:"CC",e:"TARRINA",w:1.55,v:[1150,1722,2296,1722,2296,1722,2296,2296,2296]},
+  {p:"CC",e:"CAJA AUTOARMABLE",w:1.85,v:[1235,1387,1035,1462,1363,1099,1085,1166,1166]},
+  {p:"CC",e:"CAJA AUTOARMABLE",w:1.8,v:[1200,1352,1000,1427,1328,1064,1050,1131,1131]},
+  {p:"SC",e:"PANERA",w:5.68,v:[1391,2029,1400,1104,1104,1391,1400,1104,1104]},
+  {p:"CC",e:"TARRINA",w:1.45,v:[1920,1980,1560,1722,1740,1722,2296,2296,2296]},
+  {p:"CC",e:"BASE",w:2.83,v:[1881,2177,2177,2881,2881,2177,2177,2177,2177]},
+  {p:"SC",e:"PANERA",w:4.86,v:[1200,900,900,1200,1200,1200,1200,1200,1200]},
+  {p:"SC",e:"PANERA",w:5.76,v:[1056,1241,1280,1073,1056,1073,1063,838,838]},
+  {p:"SC",e:"CAJA AUTOARMABLE",w:1.9,v:[567,527,640,710,516,710,1187,931,912]}
+];
+
+
+
+</script>
+
+
+<script>
+/* =========================================================
+   RENDIMIENTO POR ÁREA
+   RECEPCIÓN: solo observación general.
+   CONGELACIÓN / CLASIFICADORA / REPROCESOS / DESCABEZADO:
+   mantienen las 7 preguntas del liquidador de MP.
+========================================================= */
+
+/* =========================================================
+   RENDIMIENTO POR ÁREA
+   ---------------------------------------------------------
+   RECEPCIÓN:
+   - Solo observación general.
+
+   CONGELACIÓN:
+   - Evaluación del liquidador de MP.
+
+   CLASIFICADORA:
+   - Evaluación propia de clasificadora.
+
+   DESCABEZADO:
+   - Evaluación propia de descabezado.
+
+   REPROCESOS:
+   - Evaluación propia de reprocesos.
+
+   Cada área está separada para poder modificar sus
+   preguntas independientemente.
+========================================================= */
+
+function configurarRendimientoPorArea(){
+
+    const titulo = document.querySelector('#pantallaRendimiento .titulo h1');
+    const subtitulo = document.querySelector('#pantallaRendimiento .titulo p');
+    const card = document.querySelector('#pantallaRendimiento .card');
+
+    if(!titulo || !subtitulo || !card) return;
+
+
+    /* =====================================================
+       RECEPCIÓN
+    ===================================================== */
+
+    if(areaActual === 'RECEPCION'){
+
+        titulo.textContent = 'RENDIMIENTO';
+        subtitulo.textContent = 'Observación general de recepción.';
+
+        card.innerHTML = `
+
+            <h2>Observación general</h2>
+
+            <div class="campo">
+
+                <label>OBSERVACIÓN GENERAL</label>
+
+                <textarea
+                    id="observacionesRendimiento"
+                    placeholder="Ingrese la observación general..."
+                ></textarea>
+
+            </div>
+
+            <div class="acciones">
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="regresarDatos()">
+                    ← Regresar
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    onclick="irMOD()">
+                    Continuar →
+                </button>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    /* =====================================================
+       CONGELACIÓN
+    ===================================================== */
+
+    if(areaActual === 'CONGELACION'){
+
+        titulo.textContent = 'RENDIMIENTO';
+        subtitulo.textContent = 'Evaluación del liquidador de materia prima.';
+
+        card.innerHTML = `
+
+            <h2>Evaluación - Congelación</h2>
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    1.- ¿El liquidador de MP se encuentra en sitio al inicio del abastecimiento?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    2.- ¿El liquidador de MP coloca la hora de inicio de abastecimiento real?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    3.- ¿El liquidador de MP coloca el tipo de congelación de cada presentación?
+                    (nota 5, del formato de liquidadores)
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    4.- ¿El liquidador de MP anota los tiempos reales de las paralizaciones
+                    durante la congelación de una presentación?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    5.- ¿El liquidador de MP tiene conocimiento del motivo de las paralizaciones
+                    en la línea de congelación? ¿Pregunta al operador o al líder?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    6.- ¿Coinciden los datos tomados por el auditor con los del liquidador de MP?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    7.- ¿La información registrada por el liquidador de MP se encuentra completa
+                    y correctamente diligenciada?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="campo">
+
+                <label>OBSERVACIONES</label>
+
+                <textarea
+                    id="observacionesRendimiento"
+                    placeholder="Ingrese observaciones..."
+                ></textarea>
+
+            </div>
+
+
+            <div class="resultado-checks">
+
+                <div>RESULTADO AUTOMÁTICO</div>
+
+                <div class="numero-checks">
+                    <span id="numeroChecks">0</span> / 7
+                </div>
+
+                <div>Checks obtenidos</div>
+
+                <div class="evaluacion" id="evaluacion">
+                    PENDIENTE
+                </div>
+
+            </div>
+
+
+            <div class="acciones">
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="regresarDatos()">
+                    ← Regresar
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    onclick="irMOD()">
+                    Continuar →
+                </button>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    /* =====================================================
+       CLASIFICADORA
+    ===================================================== */
+
+    if(areaActual === 'CLASIFICADORA'){
+
+        titulo.textContent = 'RENDIMIENTO';
+        subtitulo.textContent = 'Evaluación de la operación de clasificadora.';
+
+        card.innerHTML = `
+
+            <h2>Evaluación - Clasificadora</h2>
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    1.- ¿El Liquidador se encuentra en sitio al inicio de la operación?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    2.- ¿El anotador registra correctamente la hora real de inicio de la operación?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    3.- ¿La información registrada corresponde a la presentación procesada?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    4.- ¿Se registran correctamente los tiempos reales de las paralizaciones?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    5.- ¿Se conoce y registra correctamente el motivo de las paralizaciones?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    6.- ¿Coinciden los datos tomados por el auditor con los registros del proceso?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    7.- ¿La información registrada se encuentra completa y correctamente diligenciada?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="campo">
+
+                <label>OBSERVACIONES</label>
+
+                <textarea
+                    id="observacionesRendimiento"
+                    placeholder="Ingrese observaciones..."
+                ></textarea>
+
+            </div>
+
+
+            <div class="resultado-checks">
+
+                <div>RESULTADO AUTOMÁTICO</div>
+
+                <div class="numero-checks">
+                    <span id="numeroChecks">0</span> / 7
+                </div>
+
+                <div>Checks obtenidos</div>
+
+                <div class="evaluacion" id="evaluacion">
+                    PENDIENTE
+                </div>
+
+            </div>
+
+
+            <div class="acciones">
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="regresarDatos()">
+                    ← Regresar
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    onclick="irMOD()">
+                    Continuar →
+                </button>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    /* =====================================================
+       DESCABEZADO
+    ===================================================== */
+
+    if(areaActual === 'DESCABEZADO'){
+
+        titulo.textContent = 'RENDIMIENTO';
+        subtitulo.textContent = 'Evaluación del proceso de descabezado.';
+
+        card.innerHTML = `
+
+            <h2>Evaluación - Descabezado</h2>
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    1.- ¿El liquidador se encuentra en sitio al inicio de la operación?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    2.- ¿El anotador registra correctamente la hora real de inicio del proceso?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    3.- ¿Se registra correctamente la actividad que se está procesando?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    4.- ¿Se registran correctamente los tiempos reales de las paralizaciones?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    5.- ¿Se identifica correctamente el motivo de las paralizaciones?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    6.- ¿Coinciden los datos tomados por el auditor con los registros del proceso?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    7.- ¿La información registrada se encuentra completa y correctamente diligenciada?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="campo">
+
+                <label>OBSERVACIONES</label>
+
+                <textarea
+                    id="observacionesRendimiento"
+                    placeholder="Ingrese observaciones..."
+                ></textarea>
+
+            </div>
+
+
+            <div class="resultado-checks">
+
+                <div>RESULTADO AUTOMÁTICO</div>
+
+                <div class="numero-checks">
+                    <span id="numeroChecks">0</span> / 7
+                </div>
+
+                <div>Checks obtenidos</div>
+
+                <div class="evaluacion" id="evaluacion">
+                    PENDIENTE
+                </div>
+
+            </div>
+
+
+            <div class="acciones">
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="regresarDatos()">
+                    ← Regresar
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    onclick="irMOD()">
+                    Continuar →
+                </button>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    /* =====================================================
+       REPROCESOS
+    ===================================================== */
+
+    if(areaActual === 'REPROCESOS'){
+
+        titulo.textContent = 'RENDIMIENTO';
+        subtitulo.textContent = 'Evaluación del proceso de reprocesos.';
+
+        card.innerHTML = `
+
+            <h2>Evaluación - Reprocesos</h2>
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    1.- ¿El anotador se encuentra en sitio al inicio de la operación?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p1" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    2.- ¿El anotador registra correctamente la hora real de inicio del reproceso?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p2" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    3.- ¿Se registra correctamente la presentación y producto que ingresa a reproceso?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p3" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    4.- ¿Se registran correctamente los tiempos reales de las paralizaciones?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p4" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    5.- ¿Se identifica correctamente el motivo de las paralizaciones o novedades?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p5" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    6.- ¿Coinciden los datos tomados por el auditor con los registros del reproceso?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p6" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="pregunta">
+                <div class="pregunta-texto">
+                    7.- ¿La información registrada se encuentra completa y correctamente diligenciada?
+                </div>
+
+                <div class="opciones">
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="SI"
+                            onchange="calcularChecks()">
+                        SI
+                    </label>
+
+                    <label class="opcion">
+                        <input type="radio" name="p7" value="NO"
+                            onchange="calcularChecks()">
+                        NO
+                    </label>
+                </div>
+            </div>
+
+
+            <div class="campo">
+
+                <label>OBSERVACIONES</label>
+
+                <textarea
+                    id="observacionesRendimiento"
+                    placeholder="Ingrese observaciones..."
+                ></textarea>
+
+            </div>
+
+
+            <div class="resultado-checks">
+
+                <div>RESULTADO AUTOMÁTICO</div>
+
+                <div class="numero-checks">
+                    <span id="numeroChecks">0</span> / 7
+                </div>
+
+                <div>Checks obtenidos</div>
+
+                <div class="evaluacion" id="evaluacion">
+                    PENDIENTE
+                </div>
+
+            </div>
+
+
+            <div class="acciones">
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="regresarDatos()">
+                    ← Regresar
+                </button>
+
+                <button
+                    class="btn btn-primary"
+                    onclick="irMOD()">
+                    Continuar →
+                </button>
+
+            </div>
+        `;
+
+        return;
+    }
+}
+/* =========================================================
+   IR A RENDIMIENTO
+========================================================= */
+function irRendimiento(){
+    const dia=document.getElementById('dia').value;
+    const turno=document.getElementById('turno').value;
+    const equipo=document.getElementById('equipo').value;
+    const supervisor=document.getElementById('supervisor').value;
+    const lider=document.getElementById('lider').value;
+    const jefe=document.getElementById('jefe').value;
+
+    if(!dia || !turno || !supervisor || !lider || !jefe ||
+       (areaActual!=='RECEPCION' && areaActual!=='REPROCESOS' && !equipo)){
+        alert('Complete todos los campos antes de continuar.');
+        return;
+    }
+
+    auditoria.area=areaActual;
+    auditoria.dia=dia;
+    auditoria.turno=turno;
+    auditoria.equipo=(areaActual==='RECEPCION'||areaActual==='REPROCESOS')?'N/A':equipo;
+    auditoria.supervisor=supervisor;
+    auditoria.lider=lider;
+    auditoria.jefe=jefe;
+
+    configurarRendimientoPorArea();
+    mostrarPantalla('pantallaRendimiento');
+}
+
+/* =========================================================
+   IR A MOD
+   Solo RECEPCIÓN no tiene formulario de 7 preguntas.
+   REPROCESOS sí tiene las 7 preguntas.
+========================================================= */
+function irMOD(){
+    if(areaActual==='RECEPCION'){
+        auditoria.observacionesRendimiento=
+            (document.getElementById('observacionesRendimiento')?.value||'').trim();
+        auditoria.preguntas=[];
+        auditoria.checks=0;
+        auditoria.evaluacion='NO APLICA';
+    }else{
+        for(let i=1;i<=7;i++){
+            if(!document.querySelector('input[name="p'+i+'"]:checked')){
+                alert('Debe responder todas las preguntas de Rendimiento.');
+                return;
+            }
+        }
+        auditoria.observacionesRendimiento=
+            (document.getElementById('observacionesRendimiento')?.value||'').trim();
+    }
+
+    if(areaActual==='CONGELACION') renderMODCongelacion();
+    else if(areaActual==='CLASIFICADORA') renderMODClasificadora();
+    else if(areaActual==='RECEPCION') renderMODRecepcion();
+    else if(areaActual==='DESCABEZADO') renderMODDescabezado();
+    else if(areaActual==='REPROCESOS') renderMODReprocesos();
+    else renderMODRecepcion();
+
+    mostrarPantalla('pantallaMOD');
+}
+
+/* =========================================================
+   CUMPLIMIENTO MOD — RECEPCIÓN
+   TURNO / ESTÁNDAR / PERSONAL
+   Al seleccionar turno se carga automáticamente el estándar.
+========================================================= */
+function renderMODRecepcion(){
+    const wrap=document.getElementById("contenedorMODArea");
+    wrap.innerHTML=`
+      <h2>📦 CUMPLIMIENTO DE MOD — RECEPCIÓN</h2>
+      <div class="tabla-wrapper">
+      <table>
+        <thead><tr>
+          <th>TURNO</th>
+          <th>ESTÁNDAR</th>
+          <th>PERSONAL</th>
+          <th>CUMPLIMIENTO</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>
+              <select id="turnoMODRecepcion" onchange="cargarEstandarRecepcion()">
+                <option value="">Seleccione...</option>
+                <option value="DIA">DIA</option>
+                <option value="NOCHE">NOCHE</option>
+              </select>
+            </td>
+            <td>
+              <div class="mod-estandar-auto" id="estandarMODRecepcion">
+                —<small>Seleccione turno</small>
+              </div>
+            </td>
+            <td>
+              <input id="personalMODRecepcion" type="number" min="0" step="1"
+                     placeholder="Personal faltante" oninput="calcularMODRecepcion()">
+            </td>
+            <td>
+              <div id="cumplimientoMODRecepcion"
+                   class="cumplimiento-auto pendiente-auto">Pendiente</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>`;
+}
+
+function cargarEstandarRecepcion(){
+    const turno=document.getElementById("turnoMODRecepcion")?.value;
+    const box=document.getElementById("estandarMODRecepcion");
+    if(!box)return;
+    if(turno==="DIA"){
+        box.innerHTML=`31 personas<small>PESCA VIVA</small>`;
+    }else if(turno==="NOCHE"){
+        box.innerHTML=`38 personas<small>RECEPCIÓN DE BINES</small>`;
+    }else{
+        box.innerHTML=`—<small>Seleccione turno</small>`;
+    }
+    calcularMODRecepcion();
+}
+
+function calcularMODRecepcion(){
+    const turno=document.getElementById("turnoMODRecepcion")?.value;
+    const personal=Number(document.getElementById("personalMODRecepcion")?.value||0);
+    const box=document.getElementById("cumplimientoMODRecepcion");
+    if(!box)return;
+    const estandar=turno==="DIA"?31:turno==="NOCHE"?38:0;
+    if(!estandar || !personal){
+        box.textContent="Pendiente";
+        box.className="cumplimiento-auto pendiente-auto";
+    }else if(personal>=estandar){
+        box.textContent="✓ CUMPLE";
+        box.className="cumplimiento-auto cumple-auto";
+    }else{
+        box.textContent="✕ NO CUMPLE";
+        box.className="cumplimiento-auto no-cumple-auto";
+    }
+}
+
+/* =========================================================
+   CUMPLIMIENTO MOD — DESCABEZADO
+   TURNO / ESTÁNDAR / PERSONAL
+   El estándar se carga automáticamente según la configuración.
+========================================================= */
+function renderMODDescabezado(){
+    const wrap=document.getElementById("contenedorMODArea");
+    wrap.innerHTML=`
+      <h2>🦐 CUMPLIMIENTO DE MOD — DESCABEZADO</h2>
+      <div class="tabla-wrapper">
+      <table>
+        <thead><tr>
+          <th>TURNO</th>
+          <th>ESTÁNDAR</th>
+          <th>PERSONAL</th>
+          <th>CUMPLIMIENTO</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td>
+              <select id="turnoMODDescabezado" onchange="cargarEstandarDescabezado()">
+                <option value="">Seleccione...</option>
+                <option value="DIA_MODULO_1">DIA — MÓDULO 1</option>
+                <option value="DIA_MODULO_2">DIA — MÓDULO 2</option>
+                <option value="DIA_AMBOS">DIA — AMBOS MÓDULOS</option>
+              </select>
+            </td>
+            <td>
+              <div class="mod-estandar-auto" id="estandarMODDescabezado">
+                —<small>Seleccione configuración</small>
+              </div>
+            </td>
+            <td>
+              <input id="personalMODDescabezado" type="number" min="0" step="1"
+                     placeholder="Personal faltante" oninput="calcularMODDescabezado()">
+            </td>
+            <td>
+              <div id="cumplimientoMODDescabezado"
+                   class="cumplimiento-auto pendiente-auto">Pendiente</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>`;
+}
+
+function cargarEstandarDescabezado(){
+    const cfg=document.getElementById("turnoMODDescabezado")?.value;
+    const box=document.getElementById("estandarMODDescabezado");
+    if(!box)return;
+    const mapa={
+        DIA_MODULO_1:{valor:65,texto:"MÓDULO 1"},
+        DIA_MODULO_2:{valor:65,texto:"MÓDULO 2"},
+        DIA_AMBOS:{valor:130,texto:"AMBOS MÓDULOS"}
+    };
+    const item=mapa[cfg];
+    box.innerHTML=item
+        ? `${item.valor} personas<small>${item.texto}</small>`
+        : `—<small>Seleccione configuración</small>`;
+    calcularMODDescabezado();
+}
+
+function calcularMODDescabezado(){
+    const cfg=document.getElementById("turnoMODDescabezado")?.value;
+    const personal=Number(document.getElementById("personalMODDescabezado")?.value||0);
+    const box=document.getElementById("cumplimientoMODDescabezado");
+    if(!box)return;
+    const estandar=cfg==="DIA_MODULO_1"?65:cfg==="DIA_MODULO_2"?65:cfg==="DIA_AMBOS"?130:0;
+    if(!estandar || !personal){
+        box.textContent="Pendiente";
+        box.className="cumplimiento-auto pendiente-auto";
+    }else if(personal>=estandar){
+        box.textContent="✓ CUMPLE";
+        box.className="cumplimiento-auto cumple-auto";
+    }else{
+        box.textContent="✕ NO CUMPLE";
+        box.className="cumplimiento-auto no-cumple-auto";
+    }
+}
+
+/* =========================================================
+   REPROCESOS
+   No tiene formulario MOD: solo observación general.
+   No aparece "Debe agregar al menos una presentación".
+========================================================= */
+function renderMODReprocesos(){
+    const wrap=document.getElementById("contenedorMODArea");
+    wrap.innerHTML=`
+      <h2>🔄 CUMPLIMIENTO DE MOD — REPROCESOS</h2>
+      <div class="campo">
+      </div>`;
+}
+
+/* =========================================================
+   FINALIZAR — estructura por área
+========================================================= */
+const finalizarOriginalReparado = finalizar;
+finalizar = function(){
+    if(auditoriaGuardada){
+        cargarResumen();
+        mostrarPantalla("pantallaFinal");
+        return;
+    }
+
+    const mod=[];
+
+    if(areaActual==="RECEPCION"){
+        const turno=document.getElementById("turnoMODRecepcion")?.value;
+        const personal=document.getElementById("personalMODRecepcion")?.value||"";
+        if(!turno || !personal){
+            alert("Seleccione el turno y escriba el personal.");
+            return;
+        }
+        const estandar=turno==="DIA"?31:38;
+        const estandarTexto=turno==="DIA"?"PESCA VIVA":"RECEPCIÓN DE BINES";
+        mod.push({
+            linea:turno,
+            presentacion:estandarTexto,
+            kilos:0,tipo:"MOD",
+            estandar:String(estandar),
+            teorico:"",personal:String(personal),
+            panerasMin:"",kgHora:0,
+            cumplimiento:Number(personal)>=estandar?"Cumple":"No Cumple"
+        });
+        auditoria.observacionesRendimiento=
+            (document.getElementById("observacionesRendimiento")?.value||"").trim();
+    }
+    else if(areaActual==="DESCABEZADO"){
+        const cfg=document.getElementById("turnoMODDescabezado")?.value;
+        const personal=document.getElementById("personalMODDescabezado")?.value||"";
+        const mapa={
+            DIA_MODULO_1:{valor:65,texto:"MÓDULO 1"},
+            DIA_MODULO_2:{valor:65,texto:"MÓDULO 2"},
+            DIA_AMBOS:{valor:130,texto:"AMBOS MÓDULOS"}
+        };
+        const item=mapa[cfg];
+        if(!item || !personal){
+            alert("Seleccione la configuración y escriba el personal.");
+            return;
+        }
+        mod.push({
+            linea:"DIA",
+            presentacion:item.texto,
+            kilos:0,tipo:"MOD",
+            estandar:String(item.valor),
+            teorico:"",personal:String(personal),
+            panerasMin:"",kgHora:0,
+            cumplimiento:Number(personal)>=item.valor?"Cumple":"No Cumple"
+        });
+    }
+    else if(areaActual==="REPROCESOS"){
+        auditoria.observacionesRendimiento=
+            (document.getElementById("observacionGeneralReprocesos")?.value||"").trim();
+        auditoria.observacionesMOD="";
+        auditoria.mod=[];
+        auditoria.preguntas=[];
+        for(let i=1;i<=7;i++){
+            const r=document.querySelector('input[name="p'+i+'"]:checked');
+            if(r) auditoria.preguntas.push({numero:i,respuesta:r.value});
+        }
+        auditoria.id=Date.now().toString();
+        auditoria.fechaRegistro=new Date().toLocaleString("es-EC");
+        guardarAuditoria();
+        auditoriaGuardada=true;
+        cargarResumen();
+        mostrarPantalla("pantallaFinal");
+        actualizarContadorHistorial();
+        return;
+    }
+    else if(areaActual==="CLASIFICADORA"){
+        const c=document.getElementById("clasifSel")?.value;
+        const p=document.getElementById("tipoProcesoClasif")?.value;
+        const e=document.getElementById("envaseClasif")?.value;
+        const w=normalizarPeso(document.getElementById("pesoClasif")?.value||"");
+        const personal=document.getElementById("personalClasif")?.value||"";
+        const pan=document.getElementById("panerasClasif")?.value||"";
+        const item=ESTANDARES_CLASIF.find(x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011);
+        const est=item&&c?Number(item.v[Number(c)-1]):null;
+        if(!c||!item||!est||!personal||!pan){
+            alert("Complete clasificadora, proceso, envase, peso, personal y paneras/min.");
+            return;
+        }
+        const kg=Number(pan)*4*60*w;
+        mod.push({
+            linea:"Clasificadora "+c,
+            presentacion:p+" / "+e+" / "+String(w).replace(".",","),
+            kilos:w,tipo:"CARRILES",
+            estandar:String(est),teorico:String(est),
+            personal:String(personal),panerasMin:String(pan),kgHora:kg,
+            cumplimiento:kg>=est?"Cumple":"No Cumple"
+        });
+    }
+    else if(areaActual==="CONGELACION"){
+        const filas=document.querySelectorAll("#cuerpoMOD tr");
+        if(!filas.length){
+            alert("No existe la tabla de Congelación.");
+            return;
+        }
+        filas.forEach(fila=>{
+            const sel=fila.querySelector(".presentacion");
+            const o=sel?.options[sel.selectedIndex];
+            const personal=fila.querySelector(".personal")?.value||"";
+            const pan=fila.querySelector(".bases")?.value||"";
+            const linea=fila.querySelector(".lineaCongelacion")?.value||"";
+            if(!o||!o.value||!personal||!pan)return;
+            const kilos=Number(o.dataset.kilos);
+            const tipo=o.dataset.tipo||"CARRILES";
+            const est=o.dataset.mod||"";
+            const teor=o.dataset.teorico||"";
+            const kg=tipo==="BASES"?Number(pan)*4*4*60*kilos:Number(pan)*4*60*kilos;
+            const auto=fila.querySelector(".cumplimiento-auto");
+            const cump=auto?.textContent.includes("CUMPLE")&&!auto?.textContent.includes("NO CUMPLE")
+                ?"Cumple":auto?.textContent.includes("NO CUMPLE")?"No Cumple":"Pendiente";
+            mod.push({
+                linea,presentacion:o.dataset.nombre,kilos,tipo,
+                estandar:est,teorico:teor,personal:String(personal),
+                panerasMin:String(pan),kgHora:kg,cumplimiento:cump
+            });
+        });
+        if(!mod.length){
+            alert("Complete presentación, MOD personal y paneras/min en Congelación.");
+            return;
+        }
+    }
+    else{
+        alert("Área no configurada para cumplimiento de MOD.");
+        return;
+    }
+
+    auditoria.id=Date.now().toString();
+    auditoria.fechaRegistro=new Date().toLocaleString("es-EC");
+    auditoria.mod=mod;
+    auditoria.observacionesMOD=
+        (document.getElementById("observacionesMOD")?.value||"").trim();
+
+    if(areaActual!=="RECEPCION" && areaActual!=="REPROCESOS"){
+        auditoria.preguntas=[];
+        for(let i=1;i<=7;i++){
+            const r=document.querySelector('input[name="p'+i+'"]:checked');
+            auditoria.preguntas.push({numero:i,respuesta:r?r.value:""});
+        }
+    }
+
+    guardarAuditoria();
+    auditoriaGuardada=true;
+    cargarResumen();
+    mostrarPantalla("pantallaFinal");
+    actualizarContadorHistorial();
+};
+</script>
+</body>
+
+</html>
