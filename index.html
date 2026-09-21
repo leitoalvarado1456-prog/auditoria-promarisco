@@ -1887,61 +1887,118 @@ SINCRONIZACIÓN PC + TELÉFONO
 =========================================================
 
 IMPORTANTE:
-Aquí debes pegar la URL del Web App de Google Apps Script.
+Aquí se configura la URL del Web App de Google Apps Script.
 
-Ejemplo:
-const API_URL = "https://script.google.com/macros/s/AKfycbxx7_aPlJjgVcxGmXRKMn5xsxVU3PB2C3A6wxjm8CNHYYPIKpGDu4yDZ5C2k9seoE0y/exec";
+URL ACTUAL:
+https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec
 
-Mientras esté vacía, el sistema seguirá funcionando con
-localStorage como respaldo, pero NO compartirá auditorías
-entre dispositivos.
+El sistema seguirá utilizando localStorage como respaldo,
+pero las auditorías podrán sincronizarse entre dispositivos.
+=========================================================
 */
 
-let API_URL = localStorage.getItem("promariscoAPIURL") || "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec";
+
+/* =========================================================
+   URL CENTRAL DE GOOGLE APPS SCRIPT
+========================================================= */
+
+const URL_CENTRAL_PROMARISCO =
+    "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec";
+
+
+/* =========================================================
+   USAR SIEMPRE LA URL ACTUAL
+========================================================= */
+
+let API_URL = URL_CENTRAL_PROMARISCO;
+
+
+/* =========================================================
+   CONTROL DE SINCRONIZACIÓN
+========================================================= */
 
 let sincronizacionEnCurso = false;
 
+
+/* =========================================================
+   CONFIGURAR CONEXIÓN
+========================================================= */
+
 function configurarURLHistorial(){
-    const actual = API_URL || "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec"";
+
+    const actual = API_URL;
+
     const nuevaURL = prompt(
         "Pegue aquí la URL del Web App de Google Apps Script:\n\n" +
-        "Ejemplo: https://script.google.com/macros/s/XXXXXXXX/exec",
+        "Ejemplo:\nhttps://script.google.com/macros/s/XXXXXXXX/exec",
         actual
     );
 
+
     if(nuevaURL === null) return;
+
 
     const url = nuevaURL.trim();
 
-    if(url === "") {
-        API_URL = "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec"";
+
+    /* =====================================================
+       SI SE DEJA VACÍO
+    ===================================================== */
+
+    if(url === ""){
+
+        API_URL = "";
+
         localStorage.removeItem("promariscoAPIURL");
+
         actualizarEstadoSincronizacion(
             "🟠 Conexión central desactivada. Solo se guardará localmente.",
             "#d68b00"
         );
+
         return;
+
     }
 
-    if(!url.startsWith("https://script.google.com/macros/s/")) {
+
+    /* =====================================================
+       VALIDAR URL
+    ===================================================== */
+
+    if(!url.startsWith("https://script.google.com/macros/s/")){
+
         alert(
             "La URL no parece ser una URL válida de Google Apps Script.\n\n" +
-            "Debe comenzar con:\nhttps://script.google.com/macros/s/"
+            "Debe comenzar con:\n" +
+            "https://script.google.com/macros/s/"
         );
+
         return;
+
     }
 
+
+    /* =====================================================
+       GUARDAR NUEVA URL
+    ===================================================== */
+
     API_URL = url;
-    localStorage.setItem("promariscoAPIURL", API_URL);
+
+    localStorage.setItem(
+        "promariscoAPIURL",
+        API_URL
+    );
+
 
     actualizarEstadoSincronizacion(
         "🟢 URL central configurada. Probando sincronización...",
         "#16844b"
     );
 
-    sincronizarHistorial(true);
-}
 
+    sincronizarHistorial(true);
+
+}
 
 let auditoria = {
 
