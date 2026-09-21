@@ -4508,7 +4508,12 @@ function irMOD(){
    FINALIZAR — GUARDA LA ESTRUCTURA CORRECTA SEGÚN ÁREA
 ========================================================= */
 function finalizar(){
-    if(auditoriaGuardada){cargarResumen();mostrarPantalla("pantallaFinal");return;}
+    if(auditoriaGuardada){
+        cargarResumen();
+        mostrarPantalla("pantallaFinal");
+        return;
+    }
+
     const mod=[];
 
     if(areaActual==="RECEPCION"){
@@ -4516,78 +4521,240 @@ function finalizar(){
         const sn=document.getElementById("estandarRecepcionNoche");
         const dia=document.getElementById("personalRecepcionDia")?.value||"";
         const noche=document.getElementById("personalRecepcionNoche")?.value||"";
+
         const od=sd?.options[sd.selectedIndex];
         const on=sn?.options[sn.selectedIndex];
+
         const ed=Number(od?.dataset?.estandar||0);
         const en=Number(on?.dataset?.estandar||0);
-        if(!sd?.value||!sn?.value||!dia||!noche){alert("Seleccione el estándar y complete el personal de DIA y NOCHE en Recepción.");return;}
-        mod.push({linea:"DIA",presentacion:sd.value,kilos:0,tipo:"MOD",estandar:String(ed),teorico:"",personal:String(dia),panerasMin:"",kgHora:0,cumplimiento:Number(dia)>=ed?"Cumple":"No Cumple"});
-        mod.push({linea:"NOCHE",presentacion:sn.value,kilos:0,tipo:"MOD",estandar:String(en),teorico:"",personal:String(noche),panerasMin:"",kgHora:0,cumplimiento:Number(noche)>=en?"Cumple":"No Cumple"});
+
+        if(!sd?.value||!sn?.value||!dia||!noche){
+            alert("Seleccione el estándar y complete el personal de DIA y NOCHE en Recepción.");
+            return;
+        }
+
+        mod.push({
+            linea:"DIA",
+            presentacion:sd.value,
+            kilos:0,
+            tipo:"MOD",
+            estandar:String(ed),
+            teorico:"",
+            personal:String(dia),
+            panerasMin:"",
+            kgHora:0,
+            cumplimiento:Number(dia)>=ed?"Cumple":"No Cumple"
+        });
+
+        mod.push({
+            linea:"NOCHE",
+            presentacion:sn.value,
+            kilos:0,
+            tipo:"MOD",
+            estandar:String(en),
+            teorico:"",
+            personal:String(noche),
+            panerasMin:"",
+            kgHora:0,
+            cumplimiento:Number(noche)>=en?"Cumple":"No Cumple"
+        });
     }
+
     else if(areaActual==="DESCABEZADO"){
         const s1=document.getElementById("estandarDescabezado1");
         const s2=document.getElementById("estandarDescabezado2");
+
         const p1=document.getElementById("personalDescabezado1")?.value||"";
         const p2=document.getElementById("personalDescabezado2")?.value||"";
+
         const o1=s1?.options[s1.selectedIndex];
         const o2=s2?.options[s2.selectedIndex];
+
         const e1=Number(o1?.dataset?.estandar||0);
         const e2=Number(o2?.dataset?.estandar||0);
-        if(!s1?.value||!s2?.value||!p1||!p2){alert("Seleccione la configuración y complete el personal de los dos módulos de Descabezado.");return;}
-        mod.push({linea:"DIA",presentacion:s1.value,kilos:0,tipo:"MOD",estandar:String(e1),teorico:"",personal:String(p1),panerasMin:"",kgHora:0,cumplimiento:Number(p1)>=e1?"Cumple":"No Cumple"});
-        mod.push({linea:"DIA",presentacion:s2.value,kilos:0,tipo:"MOD",estandar:String(e2),teorico:"",personal:String(p2),panerasMin:"",kgHora:0,cumplimiento:Number(p2)>=e2?"Cumple":"No Cumple"});
+
+        if(!s1?.value||!s2?.value||!p1||!p2){
+            alert("Seleccione la configuración y complete el personal de los dos módulos de Descabezado.");
+            return;
+        }
+
+        mod.push({
+            linea:"DIA",
+            presentacion:s1.value,
+            kilos:0,
+            tipo:"MOD",
+            estandar:String(e1),
+            teorico:"",
+            personal:String(p1),
+            panerasMin:"",
+            kgHora:0,
+            cumplimiento:Number(p1)>=e1?"Cumple":"No Cumple"
+        });
+
+        mod.push({
+            linea:"DIA",
+            presentacion:s2.value,
+            kilos:0,
+            tipo:"MOD",
+            estandar:String(e2),
+            teorico:"",
+            personal:String(p2),
+            panerasMin:"",
+            kgHora:0,
+            cumplimiento:Number(p2)>=e2?"Cumple":"No Cumple"
+        });
     }
+
     else if(areaActual==="CLASIFICADORA"){
         const c=document.getElementById("clasifSel")?.value;
         const p=document.getElementById("tipoProcesoClasif")?.value;
         const e=document.getElementById("envaseClasif")?.value;
-        const w=normalizarPeso(document.getElementById("pesoClasif")?.value||"");
-        const personal=document.getElementById("personalClasif")?.value||"";
-        const pan=document.getElementById("panerasClasif")?.value||"";
-        const item=ESTANDARES_CLASIF.find(x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011);
-        const est=item&&c?Number(item.v[Number(c)-1]):null;
-        if(!c||!item||!est||!personal||!pan){alert("Complete clasificadora, proceso, envase, peso, personal y paneras/min.");return;}
+        const w=normalizarPeso(
+            document.getElementById("pesoClasif")?.value||""
+        );
+
+        const personal=
+            document.getElementById("personalClasif")?.value||"";
+
+        const pan=
+            document.getElementById("panerasClasif")?.value||"";
+
+        const item=ESTANDARES_CLASIF.find(
+            x=>x.p===p &&
+               x.e===e &&
+               Math.abs(x.w-w)<0.011
+        );
+
+        const est=item&&c
+            ?Number(item.v[Number(c)-1])
+            :null;
+
+        if(!c||!item||!est||!personal||!pan){
+            alert(
+                "Complete clasificadora, proceso, envase, peso, personal y paneras/min."
+            );
+            return;
+        }
+
         const kg=Number(pan)*4*60*w;
-        mod.push({linea:"Clasificadora "+c,presentacion:p+" / "+e+" / "+String(w).replace(".",","),kilos:w,tipo:"CARRILES",estandar:String(est),teorico:String(est),personal:String(personal),panerasMin:String(pan),kgHora:kg,cumplimiento:kg>=est?"Cumple":"No Cumple"});
+
+        mod.push({
+            linea:"Clasificadora "+c,
+            presentacion:
+                p+" / "+e+" / "+
+                String(w).replace(".",","),
+            kilos:w,
+            tipo:"CARRILES",
+            estandar:String(est),
+            teorico:String(est),
+            personal:String(personal),
+            panerasMin:String(pan),
+            kgHora:kg,
+            cumplimiento:kg>=est?"Cumple":"No Cumple"
+        });
     }
+
     else if(areaActual==="CONGELACION"){
         const filas=document.querySelectorAll("#cuerpoMOD tr");
-        if(!filas.length){alert("No existe la tabla de Congelación.");return;}
+
+        if(!filas.length){
+            alert("No existe la tabla de Congelación.");
+            return;
+        }
+
         filas.forEach(fila=>{
             const sel=fila.querySelector(".presentacion");
             const o=sel?.options[sel.selectedIndex];
-            const personal=fila.querySelector(".personal")?.value||"";
-            const pan=fila.querySelector(".bases")?.value||"";
-            const linea=fila.querySelector(".lineaCongelacion")?.value||"";
+
+            const personal=
+                fila.querySelector(".personal")?.value||"";
+
+            const pan=
+                fila.querySelector(".bases")?.value||"";
+
+            const linea=
+                fila.querySelector(".lineaCongelacion")?.value||"";
+
             if(!o||!o.value||!personal||!pan)return;
+
             const kilos=Number(o.dataset.kilos);
             const tipo=o.dataset.tipo||"CARRILES";
             const est=o.dataset.mod||"";
             const teor=o.dataset.teorico||"";
-            const kg=tipo==="BASES"?Number(pan)*4*4*60*kilos:Number(pan)*4*60*kilos;
-            const auto=fila.querySelector(".cumplimiento-auto");
-            const cump=auto?.textContent.includes("CUMPLE")&&!auto?.textContent.includes("NO CUMPLE")?"Cumple":auto?.textContent.includes("NO CUMPLE")?"No Cumple":"Pendiente";
-            mod.push({linea,presentacion:o.dataset.nombre,kilos,tipo,estandar:est,teorico:teor,personal:String(personal),panerasMin:String(pan),kgHora:kg,cumplimiento:cump});
+
+            const kg=
+                tipo==="BASES"
+                ?Number(pan)*4*4*60*kilos
+                :Number(pan)*4*60*kilos;
+
+            const auto=
+                fila.querySelector(".cumplimiento-auto");
+
+            const cump=
+                auto?.textContent.includes("CUMPLE") &&
+                !auto?.textContent.includes("NO CUMPLE")
+                    ?"Cumple"
+                    :auto?.textContent.includes("NO CUMPLE")
+                        ?"No Cumple"
+                        :"Pendiente";
+
+            mod.push({
+                linea,
+                presentacion:o.dataset.nombre,
+                kilos,
+                tipo,
+                estandar:est,
+                teorico:teor,
+                personal:String(personal),
+                panerasMin:String(pan),
+                kgHora:kg,
+                cumplimiento:cump
+            });
         });
-        if(!mod.length){alert("Complete presentación, MOD personal y paneras/min en Congelación.");return;}
+
+        if(!mod.length){
+            alert(
+                "Complete presentación, MOD personal y paneras/min en Congelación."
+            );
+            return;
+        }
     }
+
     else{
-        alert("Área no configurada para cumplimiento de MOD.");return;
+        alert("Área no configurada para cumplimiento de MOD.");
+        return;
     }
 
     auditoria.id=Date.now().toString();
-    auditoria.fechaRegistro=new Date().toLocaleString("es-EC");
+
+    auditoria.fechaRegistro=
+        new Date().toLocaleString("es-EC");
+
     auditoria.mod=mod;
-    auditoria.observacionesMOD=document.getElementById("observacionesMOD").value.trim();
+
+    auditoria.observacionesMOD=
+        document.getElementById("observacionesMOD")
+        .value.trim();
+
     auditoria.preguntas=[];
-    for(let i=1;i<=7;i++)auditoria.preguntas.push({numero:i,respuesta:obtenerRespuesta("p"+i)});
+
+    for(let i=1;i<=7;i++){
+        auditoria.preguntas.push({
+            numero:i,
+            respuesta:obtenerRespuesta("p"+i)
+        });
+    }
+
     guardarAuditoria();
+
     auditoriaGuardada=true;
+
     cargarResumen();
+
     mostrarPantalla("pantallaFinal");
+
     actualizarContadorHistorial();
 }
-
 
 const ESTANDARES_CLASIF = [
   {p:"CC",e:"BASE",w:1.92,v:[1713,1843,2188,1735,1884,1735,2188,1562,1843]},
