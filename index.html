@@ -1031,13 +1031,26 @@ td select {
         </div>
 
         <div>
-            Auditorías guardadas en este navegador
+            Historial compartido entre PC y teléfono
+        </div>
+
+        <div id="estadoSincronizacion"
+             style="margin-top:10px;font-size:13px;font-weight:bold;color:#687780;">
+            🔄 Preparando sincronización...
         </div>
 
     </div>
 
 
     <div class="acciones">
+
+        <button
+            class="btn btn-primary"
+            onclick="sincronizarHistorial()">
+
+            🔄 Sincronizar historial
+
+        </button>
 
         <button
             class="btn btn-excel"
@@ -1867,6 +1880,26 @@ let auditoriaGuardada = false;
 
 const CLAVE_HISTORIAL =
     "promariscoAuditorias";
+
+/*
+=========================================================
+SINCRONIZACIÓN PC + TELÉFONO
+=========================================================
+
+IMPORTANTE:
+Aquí debes pegar la URL del Web App de Google Apps Script.
+
+Ejemplo:
+const API_URL = "https://script.google.com/macros/s/XXXXXXXX/exec";
+
+Mientras esté vacía, el sistema seguirá funcionando con
+localStorage como respaldo, pero NO compartirá auditorías
+entre dispositivos.
+*/
+
+const API_URL = "";
+
+let sincronizacionEnCurso = false;
 
 
 let auditoria = {
@@ -3167,6 +3200,11 @@ function finalizar() {
 
     actualizarContadorHistorial();
 
+        /*
+        Al abrir la página se consulta el historial central.
+        */
+        sincronizarHistorial(false);
+
 }
 
 
@@ -3176,16 +3214,44 @@ function finalizar() {
 
 function guardarAuditoria() {
 
+    const copiaAuditoria =
+        JSON.parse(
+            JSON.stringify(auditoria)
+        );
+
     let historial =
         obtenerHistorial();
 
 
-    historial.push(
-        JSON.parse(
-            JSON.stringify(auditoria)
-        )
-    );
+    /*
+    Evitar duplicados por ID
+    */
 
+    const existe =
+        historial.some(
+            function(item) {
+
+                return String(item.id) ===
+                       String(copiaAuditoria.id);
+
+            }
+        );
+
+
+    if(!existe) {
+
+        historial.push(
+            copiaAuditoria
+        );
+
+    }
+
+
+    /*
+    Guardar inmediatamente en el teléfono/PC.
+    Esto permite trabajar incluso si en ese momento
+    no existe conexión a Internet.
+    */
 
     localStorage.setItem(
 
@@ -3195,7 +3261,451 @@ function guardarAuditoria() {
 
     );
 
+
+    actualizarContadorHistorial();
+
+
+    /*
+    Enviar automáticamente al historial central.
+    */
+
+    sincronizarAuditoriaConServidor(
+        copiaAuditoria
+    );
+
 }
+
+
+
+/* =========================================================
+   ACTUALIZAR ESTADO DE SINCRONIZACIÓN
+========================================================= */
+
+function actualizarEstadoSincronizacion(
+    mensaje,
+    color = "#687780"
+) {
+
+    const elemento =
+        document.getElementById(
+            "estadoSincronizacion"
+        );
+
+
+    if(elemento) {
+
+        elemento.textContent =
+            mensaje;
+
+        elemento.style.color =
+            color;
+
+    }
+
+}
+
+
+/* =========================================================
+   SINCRONIZAR UNA AUDITORÍA CON EL SERVIDOR
+========================================================= */
+
+async function sincronizarAuditoriaConServidor(
+    auditoriaParaEnviar
+) {
+
+    if(!API_URL) {
+
+        actualizarEstadoSincronizacion(
+            "⚠️ Sin URL de sincronización. Solo guardado local.",
+            "#d68b00"
+        );
+
+        return;
+
+    }
+
+
+    if(!navigator.onLine) {
+
+        actualizarEstadoSincronizacion(
+            "📴 Sin Internet. Auditoría guardada localmente y pendiente de sincronización.",
+            "#d68b00"
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        actualizarEstadoSincronizacion(
+            "🔄 Guardando auditoría en el historial central...",
+            "#007c91"
+        );
+
+
+        const respuesta =
+            await fetch(
+                API_URL,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "text/plain;charset=utf-8"
+                    },
+
+                    body: JSON.stringify({
+
+                        accion:
+                            "guardar",
+
+                        auditoria:
+                            auditoriaParaEnviar
+
+                    })
+
+                }
+            );
+
+
+        const resultado =
+            await respuesta.json();
+
+
+        if(!resultado.ok) {
+
+            throw new Error(
+                resultado.mensaje ||
+                "El servidor rechazó la auditoría."
+            );
+
+        }
+
+
+        /*
+        Si el servidor confirma, descargamos
+        nuevamente el historial completo para
+        que este dispositivo quede actualizado.
+        */
+
+        await sincronizarHistorial();
+
+
+    }
+
+    catch(error) {
+
+        console.error(
+            "Error sincronizando auditoría:",
+            error
+        );
+
+
+        actualizarEstadoSincronizacion(
+            "⚠️ No se pudo sincronizar ahora. Quedó guardada localmente.",
+            "#d68b00"
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   SINCRONIZAR HISTORIAL COMPLETO
+========================================================= */
+
+async function sincronizarHistorial(
+    mostrarMensaje = true
+) {
+
+    if(!API_URL) {
+
+        actualizarEstadoSincronizacion(
+            "⚠️ Falta configurar la URL del historial central.",
+            "#d68b00"
+        );
+
+        return;
+
+    }
+
+
+    if(!navigator.onLine) {
+
+        actualizarEstadoSincronizacion(
+            "📴 Sin Internet. Se conserva el historial local.",
+            "#d68b00"
+        );
+
+        return;
+
+    }
+
+
+    if(sincronizacionEnCurso) {
+
+        return;
+
+    }
+
+
+    sincronizacionEnCurso = true;
+
+
+    try {
+
+        if(mostrarMensaje) {
+
+            actualizarEstadoSincronizacion(
+                "🔄 Sincronizando PC + teléfono...",
+                "#007c91"
+            );
+
+        }
+
+
+        /*
+        1. Obtener historial central
+        */
+
+        const respuesta =
+            await fetch(
+                API_URL +
+                "?accion=obtener&_=" +
+                Date.now(),
+                {
+                    method: "GET",
+                    cache: "no-store"
+                }
+            );
+
+
+        const resultado =
+            await respuesta.json();
+
+
+        if(!resultado.ok) {
+
+            throw new Error(
+                resultado.mensaje ||
+                "No se pudo obtener el historial central."
+            );
+
+        }
+
+
+        const historialCentral =
+            Array.isArray(
+                resultado.auditorias
+            )
+            ? resultado.auditorias
+            : [];
+
+
+        /*
+        2. Leer historial local
+        */
+
+        const historialLocal =
+            obtenerHistorial();
+
+
+        /*
+        3. Unir ambos historiales sin duplicar
+        */
+
+        const mapa =
+            new Map();
+
+
+        historialLocal.forEach(
+            function(item) {
+
+                if(item && item.id) {
+
+                    mapa.set(
+                        String(item.id),
+                        item
+                    );
+
+                }
+
+            }
+        );
+
+
+        historialCentral.forEach(
+            function(item) {
+
+                if(item && item.id) {
+
+                    mapa.set(
+                        String(item.id),
+                        item
+                    );
+
+                }
+
+            }
+        );
+
+
+        const historialUnificado =
+            Array.from(
+                mapa.values()
+            );
+
+
+        /*
+        4. Guardar la copia unificada
+        */
+
+        localStorage.setItem(
+
+            CLAVE_HISTORIAL,
+
+            JSON.stringify(
+                historialUnificado
+            )
+
+        );
+
+
+        actualizarContadorHistorial();
+
+
+        /*
+        5. Enviar al servidor las auditorías
+           que todavía no estaban allí.
+
+           Esto permite recuperar pruebas hechas
+           anteriormente en este dispositivo.
+        */
+
+        const idsCentral =
+            new Set(
+                historialCentral.map(
+                    function(item) {
+
+                        return String(
+                            item.id
+                        );
+
+                    }
+                )
+            );
+
+
+        const pendientes =
+            historialLocal.filter(
+                function(item) {
+
+                    return item &&
+                           item.id &&
+                           !idsCentral.has(
+                               String(item.id)
+                           );
+
+                }
+            );
+
+
+        for(
+            const pendiente of pendientes
+        ) {
+
+            await fetch(
+                API_URL,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "text/plain;charset=utf-8"
+                    },
+
+                    body: JSON.stringify({
+
+                        accion:
+                            "guardar",
+
+                        auditoria:
+                            pendiente
+
+                    })
+
+                }
+            );
+
+        }
+
+
+        actualizarEstadoSincronizacion(
+
+            "✅ Historial sincronizado: " +
+            historialUnificado.length +
+            " auditorías",
+
+            "#16844b"
+
+        );
+
+
+    }
+
+    catch(error) {
+
+        console.error(
+            "Error sincronizando historial:",
+            error
+        );
+
+
+        actualizarEstadoSincronizacion(
+            "⚠️ No se pudo sincronizar. Se mantiene el historial local.",
+            "#d68b00"
+        );
+
+    }
+
+    finally {
+
+        sincronizacionEnCurso =
+            false;
+
+    }
+
+}
+
+
+/* =========================================================
+   EVENTOS DE CONEXIÓN
+========================================================= */
+
+window.addEventListener(
+    "online",
+    function() {
+
+        sincronizarHistorial();
+
+    }
+);
+
+
+window.addEventListener(
+    "offline",
+    function() {
+
+        actualizarEstadoSincronizacion(
+            "📴 Sin Internet. Las auditorías se guardarán localmente.",
+            "#d68b00"
+        );
+
+    }
+);
 
 
 /* =========================================================
@@ -4626,7 +5136,7 @@ function exportarHistorialExcel() {
    BORRAR HISTORIAL
 ========================================================= */
 
-function borrarHistorial() {
+async function borrarHistorial() {
 
     const historial =
         obtenerHistorial();
@@ -4650,7 +5160,10 @@ function borrarHistorial() {
 
             "Se eliminarán " +
             historial.length +
-            " auditorías guardadas en este navegador.\n\n" +
+            " auditorías.\n\n" +
+
+            "Si el historial central está configurado, " +
+            "también se eliminarán allí.\n\n" +
 
             "Esta acción no se puede deshacer."
 
@@ -4664,6 +5177,10 @@ function borrarHistorial() {
     }
 
 
+    /*
+    Borrar primero la copia local.
+    */
+
     localStorage.removeItem(
         CLAVE_HISTORIAL
     );
@@ -4672,8 +5189,86 @@ function borrarHistorial() {
     actualizarContadorHistorial();
 
 
+    /*
+    Borrar también el historial central.
+    */
+
+    if(
+        API_URL &&
+        navigator.onLine
+    ) {
+
+        try {
+
+            actualizarEstadoSincronizacion(
+                "🔄 Borrando historial central...",
+                "#d68b00"
+            );
+
+
+            const respuesta =
+                await fetch(
+                    API_URL,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "text/plain;charset=utf-8"
+                        },
+
+                        body: JSON.stringify({
+
+                            accion:
+                                "borrarTodo"
+
+                        })
+
+                    }
+                );
+
+
+            const resultado =
+                await respuesta.json();
+
+
+            if(!resultado.ok) {
+
+                throw new Error(
+                    resultado.mensaje ||
+                    "No se pudo borrar el historial central."
+                );
+
+            }
+
+
+            actualizarEstadoSincronizacion(
+                "✅ Historial central borrado.",
+                "#16844b"
+            );
+
+        }
+
+        catch(error) {
+
+            console.error(
+                "Error borrando historial central:",
+                error
+            );
+
+
+            actualizarEstadoSincronizacion(
+                "⚠️ Se borró la copia local, pero no el historial central.",
+                "#c93c3c"
+            );
+
+        }
+
+    }
+
+
     alert(
-        "El historial ha sido borrado correctamente."
+        "El historial local ha sido borrado correctamente."
     );
 
 }
