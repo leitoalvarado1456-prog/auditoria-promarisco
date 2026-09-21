@@ -3508,9 +3508,9 @@ async function sincronizarHistorial(
         }
 
 
-        /*
-        1. Obtener historial central
-        */
+        /* =====================================================
+           1. OBTENER HISTORIAL CENTRAL
+        ===================================================== */
 
         const respuesta =
             await fetch(
@@ -3522,6 +3522,16 @@ async function sincronizarHistorial(
                     cache: "no-store"
                 }
             );
+
+
+        if(!respuesta.ok) {
+
+            throw new Error(
+                "El servidor respondió con HTTP " +
+                respuesta.status
+            );
+
+        }
 
 
         const resultado =
@@ -3546,23 +3556,170 @@ async function sincronizarHistorial(
             : [];
 
 
-        /*
-        2. Leer historial local
-        */
+        /* =====================================================
+           2. OBTENER HISTORIAL LOCAL
+        ===================================================== */
 
         const historialLocal =
             obtenerHistorial();
 
 
-        /*
-        3. Unir ambos historiales sin duplicar
-        */
+        /* =====================================================
+           3. IDENTIFICAR QUÉ AUDITORÍAS YA EXISTEN
+        ===================================================== */
+
+        const idsCentral =
+            new Set();
+
+        historialCentral.forEach(
+            function(item) {
+
+                if(item && item.id) {
+
+                    idsCentral.add(
+                        String(item.id)
+                    );
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           4. ENVIAR AL SERVIDOR LAS AUDITORÍAS LOCALES
+              QUE TODAVÍA NO EXISTEN
+        ===================================================== */
+
+        const pendientes =
+            historialLocal.filter(
+                function(item) {
+
+                    return (
+                        item &&
+                        item.id &&
+                        !idsCentral.has(
+                            String(item.id)
+                        )
+                    );
+
+                }
+            );
+
+
+        for(
+            const pendiente of pendientes
+        ) {
+
+            const respuestaPost =
+                await fetch(
+                    API_URL,
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "text/plain;charset=utf-8"
+                        },
+
+                        body: JSON.stringify({
+
+                            accion:
+                                "guardar",
+
+                            auditoria:
+                                pendiente
+
+                        })
+                    }
+                );
+
+
+            if(!respuestaPost.ok) {
+
+                throw new Error(
+                    "No se pudo enviar la auditoría " +
+                    pendiente.id +
+                    ". HTTP " +
+                    respuestaPost.status
+                );
+
+            }
+
+
+            const resultadoPost =
+                await respuestaPost.json();
+
+
+            if(!resultadoPost.ok) {
+
+                throw new Error(
+                    resultadoPost.mensaje ||
+                    "Google Apps Script rechazó la auditoría."
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           5. VOLVER A CONSULTAR EL HISTORIAL CENTRAL
+              PARA OBTENER LA COPIA ACTUALIZADA
+        ===================================================== */
+
+        const respuestaFinal =
+            await fetch(
+                API_URL +
+                "?accion=obtener&_=" +
+                Date.now(),
+                {
+                    method: "GET",
+                    cache: "no-store"
+                }
+            );
+
+
+        if(!respuestaFinal.ok) {
+
+            throw new Error(
+                "No se pudo actualizar el historial después del envío."
+            );
+
+        }
+
+
+        const resultadoFinal =
+            await respuestaFinal.json();
+
+
+        if(!resultadoFinal.ok) {
+
+            throw new Error(
+                resultadoFinal.mensaje ||
+                "No se pudo actualizar el historial central."
+            );
+
+        }
+
+
+        const historialActualizado =
+            Array.isArray(
+                resultadoFinal.auditorias
+            )
+            ? resultadoFinal.auditorias
+            : [];
+
+
+        /* =====================================================
+           6. GUARDAR COPIA CENTRAL EN EL DISPOSITIVO
+        ===================================================== */
 
         const mapa =
             new Map();
 
 
-        historialLocal.forEach(
+        historialActualizado.forEach(
             function(item) {
 
                 if(item && item.id) {
@@ -3578,15 +3735,21 @@ async function sincronizarHistorial(
         );
 
 
-        historialCentral.forEach(
+        historialLocal.forEach(
             function(item) {
 
                 if(item && item.id) {
 
-                    mapa.set(
-                        String(item.id),
-                        item
-                    );
+                    if(!mapa.has(
+                        String(item.id)
+                    )) {
+
+                        mapa.set(
+                            String(item.id),
+                            item
+                        );
+
+                    }
 
                 }
 
@@ -3600,88 +3763,19 @@ async function sincronizarHistorial(
             );
 
 
-        /*
-        4. Guardar la copia unificada
-        */
-
         localStorage.setItem(
-
             CLAVE_HISTORIAL,
-
             JSON.stringify(
                 historialUnificado
             )
-
         );
 
 
+        /* =====================================================
+           7. ACTUALIZAR PANTALLA
+        ===================================================== */
+
         actualizarContadorHistorial();
-
-
-        /*
-        5. Enviar al servidor las auditorías
-           que todavía no estaban allí.
-
-           Esto permite recuperar pruebas hechas
-           anteriormente en este dispositivo.
-        */
-
-        const idsCentral =
-            new Set(
-                historialCentral.map(
-                    function(item) {
-
-                        return String(
-                            item.id
-                        );
-
-                    }
-                )
-            );
-
-
-        const pendientes =
-            historialLocal.filter(
-                function(item) {
-
-                    return item &&
-                           item.id &&
-                           !idsCentral.has(
-                               String(item.id)
-                           );
-
-                }
-            );
-
-
-        for(
-            const pendiente of pendientes
-        ) {
-
-            await fetch(
-                API_URL,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "text/plain;charset=utf-8"
-                    },
-
-                    body: JSON.stringify({
-
-                        accion:
-                            "guardar",
-
-                        auditoria:
-                            pendiente
-
-                    })
-
-                }
-            );
-
-        }
 
 
         actualizarEstadoSincronizacion(
@@ -3706,8 +3800,11 @@ async function sincronizarHistorial(
 
 
         actualizarEstadoSincronizacion(
+
             "⚠️ No se pudo sincronizar. Se mantiene el historial local.",
+
             "#d68b00"
+
         );
 
     }
@@ -3741,14 +3838,15 @@ window.addEventListener(
     function() {
 
         actualizarEstadoSincronizacion(
+
             "📴 Sin Internet. Las auditorías se guardarán localmente.",
+
             "#d68b00"
+
         );
 
     }
 );
-
-
 /* =========================================================
    OBTENER HISTORIAL
 ========================================================= */
