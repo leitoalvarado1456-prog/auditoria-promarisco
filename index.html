@@ -1897,9 +1897,50 @@ localStorage como respaldo, pero NO compartirá auditorías
 entre dispositivos.
 */
 
-const API_URL = "";
+let API_URL = localStorage.getItem("promariscoAPIURL") || "";
 
 let sincronizacionEnCurso = false;
+
+function configurarURLHistorial(){
+    const actual = API_URL || "";
+    const nuevaURL = prompt(
+        "Pegue aquí la URL del Web App de Google Apps Script:\n\n" +
+        "Ejemplo: https://script.google.com/macros/s/XXXXXXXX/exec",
+        actual
+    );
+
+    if(nuevaURL === null) return;
+
+    const url = nuevaURL.trim();
+
+    if(url === "") {
+        API_URL = "";
+        localStorage.removeItem("promariscoAPIURL");
+        actualizarEstadoSincronizacion(
+            "🟠 Conexión central desactivada. Solo se guardará localmente.",
+            "#d68b00"
+        );
+        return;
+    }
+
+    if(!url.startsWith("https://script.google.com/macros/s/")) {
+        alert(
+            "La URL no parece ser una URL válida de Google Apps Script.\n\n" +
+            "Debe comenzar con:\nhttps://script.google.com/macros/s/"
+        );
+        return;
+    }
+
+    API_URL = url;
+    localStorage.setItem("promariscoAPIURL", API_URL);
+
+    actualizarEstadoSincronizacion(
+        "🟢 URL central configurada. Probando sincronización...",
+        "#16844b"
+    );
+
+    sincronizarHistorial(true);
+}
 
 
 let auditoria = {
@@ -3424,7 +3465,7 @@ async function sincronizarHistorial(
     if(!API_URL) {
 
         actualizarEstadoSincronizacion(
-            "⚠️ Falta configurar la URL del historial central.",
+            "⚠️ Falta configurar la URL del historial central. Use ⚙️ Configurar conexión.",
             "#d68b00"
         );
 
@@ -5376,8 +5417,8 @@ const MOD_FRIO_PRESENTACIONES = [
    NOCHE = RECEPCIÓN DE BINES / 38
 ========================================================= */
 const MOD_RECEPCION = {
-    dia: {turno:"PESCA VIVA", estandar:"PESCA VIVA", valor:31},
-    noche: {turno:"RECEPCIÓN DE BINES", estandar:"RECEPCIÓN DE BINES", valor:38}
+    dia: {turno:"DIA", estandar:"PESCA VIVA", valor:31},
+    noche: {turno:"NOCHE", estandar:"RECEPCIÓN DE BINES", valor:38}
 };
 
 /* =========================================================
@@ -5403,7 +5444,7 @@ function crearTablaRecepcionMOD(){
             </tr></thead>
             <tbody>
                 <tr>
-                    <td><strong>PESCA VIVA</strong></td>
+                    <td><strong>DIA</strong></td>
                     <td>
                         <select id="estandarRecepcionDia" onchange="cambioEstandarRecepcion('dia')">
                             <option value="">Seleccione...</option>
@@ -5415,7 +5456,7 @@ function crearTablaRecepcionMOD(){
                     <td><div id="cumplimientoRecepcionDia" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
                 </tr>
                 <tr>
-                    <td><strong>RECEPCIÓN DE BINES</strong></td>
+                    <td><strong>NOCHE</strong></td>
                     <td>
                         <select id="estandarRecepcionNoche" onchange="cambioEstandarRecepcion('noche')">
                             <option value="">Seleccione...</option>
