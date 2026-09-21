@@ -1905,11 +1905,6 @@ pero las auditorías podrán sincronizarse entre dispositivos.
 const URL_CENTRAL_PROMARISCO =
     "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec";
 
-
-/* =========================================================
-   USAR SIEMPRE LA URL ACTUAL
-========================================================= */
-
 let API_URL = URL_CENTRAL_PROMARISCO;
 
 
@@ -3857,12 +3852,11 @@ async function sincronizarHistorial(
 
 
         actualizarEstadoSincronizacion(
-
-            "⚠️ No se pudo sincronizar. Se mantiene el historial local.",
-
+            "⚠️ No se pudo sincronizar.\n\n" +
+            "ERROR REAL: " +
+            error.message,
             "#d68b00"
-
-        );
+      );
 
     }
 
