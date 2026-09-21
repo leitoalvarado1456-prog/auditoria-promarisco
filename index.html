@@ -3414,8 +3414,8 @@ async function sincronizarAuditoriaConServidor(
     if(!API_URL) {
 
         actualizarEstadoSincronizacion(
-            "⚠️ Sin URL de sincronización. Solo guardado local.",
-            "#d68b00"
+          "⚠️ ERROR: " + error.message,
+          "#d68b00"
         );
 
         return;
