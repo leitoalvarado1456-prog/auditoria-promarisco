@@ -5376,8 +5376,8 @@ const MOD_FRIO_PRESENTACIONES = [
    NOCHE = RECEPCIÓN DE BINES / 38
 ========================================================= */
 const MOD_RECEPCION = {
-    dia: {turno:"DIA", estandar:"PESCA VIVA", valor:31},
-    noche: {turno:"NOCHE", estandar:"RECEPCIÓN DE BINES", valor:38}
+    dia: {turno:"PESCA VIVA", estandar:"PESCA VIVA", valor:31},
+    noche: {turno:"RECEPCIÓN DE BINES", estandar:"RECEPCIÓN DE BINES", valor:38}
 };
 
 /* =========================================================
@@ -5403,7 +5403,7 @@ function crearTablaRecepcionMOD(){
             </tr></thead>
             <tbody>
                 <tr>
-                    <td><strong>DIA</strong></td>
+                    <td><strong>PESCA VIVA</strong></td>
                     <td>
                         <select id="estandarRecepcionDia" onchange="cambioEstandarRecepcion('dia')">
                             <option value="">Seleccione...</option>
@@ -5415,7 +5415,7 @@ function crearTablaRecepcionMOD(){
                     <td><div id="cumplimientoRecepcionDia" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
                 </tr>
                 <tr>
-                    <td><strong>NOCHE</strong></td>
+                    <td><strong>RECEPCIÓN DE BINES</strong></td>
                     <td>
                         <select id="estandarRecepcionNoche" onchange="cambioEstandarRecepcion('noche')">
                             <option value="">Seleccione...</option>
