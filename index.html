@@ -3400,6 +3400,7 @@ function actualizarEstadoSincronizacion(
 
 /* =========================================================
    SINCRONIZAR UNA AUDITORÍA CON EL SERVIDOR
+   Usa POST simple (text/plain) para evitar CORS/preflight.
 ========================================================= */
 
 async function sincronizarAuditoriaConServidor(
@@ -3407,102 +3408,233 @@ async function sincronizarAuditoriaConServidor(
 ) {
 
     if(!API_URL) {
-
         actualizarEstadoSincronizacion(
-          "⚠️ ERROR: " + error.message,
-          "#d68b00"
+            "🟠 Conexión central desactivada. Auditoría guardada localmente.",
+            "#d68b00"
         );
-
         return;
-
     }
 
-
     if(!navigator.onLine) {
-
         actualizarEstadoSincronizacion(
             "📴 Sin Internet. Auditoría guardada localmente y pendiente de sincronización.",
             "#d68b00"
         );
-
         return;
-
     }
-
 
     try {
 
         actualizarEstadoSincronizacion(
-            "🔄 Guardando auditoría en el historial central...",
+            "🔄 Enviando auditoría al historial central...",
             "#007c91"
         );
 
+        await enviarPOSTCentral({
+            accion: "guardar",
+            auditoria: auditoriaParaEnviar
+        });
 
-        const respuesta =
-            await fetch(
-                API_URL,
-                {
-                    method: "POST",
+        /* El POST es de tipo no-cors, por lo que no se puede leer
+           la respuesta desde el navegador. Esperamos y consultamos
+           nuevamente mediante JSONP para confirmar la presencia. */
 
-                    headers: {
-                        "Content-Type":
-                            "text/plain;charset=utf-8"
-                    },
+        await esperar(1200);
 
-                    body: JSON.stringify({
+        const historialCentral = await obtenerHistorialCentralJSONP();
 
-                        accion:
-                            "guardar",
+        const existe = historialCentral.some(
+            item => String(item?.id) === String(auditoriaParaEnviar.id)
+        );
 
-                        auditoria:
-                            auditoriaParaEnviar
+        if(existe) {
+            const historialLocal = obtenerHistorial();
+            const mapa = new Map();
 
-                    })
+            historialCentral.forEach(item => {
+                if(item && item.id) mapa.set(String(item.id), item);
+            });
 
+            historialLocal.forEach(item => {
+                if(item && item.id && !mapa.has(String(item.id))) {
+                    mapa.set(String(item.id), item);
                 }
+            });
+
+            const combinado = Array.from(mapa.values());
+
+            localStorage.setItem(
+                CLAVE_HISTORIAL,
+                JSON.stringify(combinado)
             );
 
+            actualizarContadorHistorial();
 
-        const resultado =
-            await respuesta.json();
-
-
-        if(!resultado.ok) {
-
-            throw new Error(
-                resultado.mensaje ||
-                "El servidor rechazó la auditoría."
+            actualizarEstadoSincronizacion(
+                "🟢 Auditoría sincronizada correctamente entre PC y teléfono.",
+                "#16844b"
             );
-
+        } else {
+            actualizarEstadoSincronizacion(
+                "🟠 Auditoría guardada localmente. Quedó pendiente de sincronización.",
+                "#d68b00"
+            );
         }
 
-
-        /*
-        Si el servidor confirma, descargamos
-        nuevamente el historial completo para
-        que este dispositivo quede actualizado.
-        */
-
-        await sincronizarHistorial();
-
-
-    }
-
-    catch(error) {
+    } catch(error) {
 
         console.error(
             "Error sincronizando auditoría:",
             error
         );
 
-
         actualizarEstadoSincronizacion(
             "⚠️ No se pudo sincronizar ahora. Quedó guardada localmente.",
             "#d68b00"
         );
+    }
+}
 
+
+/* =========================================================
+   OBTENER HISTORIAL CENTRAL MEDIANTE JSONP
+   Evita el problema de CORS/redirect de Google Apps Script.
+========================================================= */
+
+function obtenerHistorialCentralJSONP() {
+
+    return new Promise((resolve, reject) => {
+
+        if(!API_URL) {
+            resolve([]);
+            return;
+        }
+
+        const callbackName =
+            "promariscoJSONP_" +
+            Date.now() +
+            "_" +
+            Math.random().toString(36).slice(2);
+
+        const script =
+            document.createElement("script");
+
+        let finalizado = false;
+
+        const limpiar = () => {
+
+            if(script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
+
+            try {
+                delete window[callbackName];
+            } catch(e) {
+                window[callbackName] = undefined;
+            }
+        };
+
+        const terminarError = (error) => {
+
+            if(finalizado) return;
+
+            finalizado = true;
+            limpiar();
+            reject(error);
+        };
+
+        window[callbackName] = (resultado) => {
+
+            if(finalizado) return;
+
+            finalizado = true;
+            limpiar();
+
+            if(!resultado || resultado.ok === false) {
+
+                reject(
+                    new Error(
+                        resultado?.mensaje ||
+                        "Google Apps Script devolvió un error."
+                    )
+                );
+
+                return;
+            }
+
+            resolve(
+                Array.isArray(resultado.auditorias)
+                    ? resultado.auditorias
+                    : []
+            );
+        };
+
+        script.onerror = () => {
+
+            terminarError(
+                new Error(
+                    "No se pudo conectar con el historial central."
+                )
+            );
+        };
+
+        script.src =
+            API_URL +
+            "?accion=obtener&callback=" +
+            encodeURIComponent(callbackName) +
+            "&_=" +
+            Date.now();
+
+        document.body.appendChild(script);
+
+        setTimeout(() => {
+
+            terminarError(
+                new Error(
+                    "Tiempo de espera agotado al consultar el historial central."
+                )
+            );
+
+        }, 15000);
+
+    });
+}
+
+
+/* =========================================================
+   ENVIAR DATOS AL SERVIDOR
+   POST simple sin preflight.
+========================================================= */
+
+async function enviarPOSTCentral(datos) {
+
+    if(!API_URL) {
+        throw new Error("No existe URL central.");
     }
 
+    const respuesta = await fetch(
+        API_URL,
+        {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+                "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(datos)
+        }
+    );
+
+    /* En no-cors la respuesta es opaque. Lo importante es
+       que el navegador haya podido realizar la solicitud. */
+    return respuesta;
+}
+
+
+function esperar(ms) {
+
+    return new Promise(
+        resolve => setTimeout(resolve, ms)
+    );
 }
 
 
@@ -3517,14 +3649,12 @@ async function sincronizarHistorial(
     if(!API_URL) {
 
         actualizarEstadoSincronizacion(
-            "⚠️ Falta configurar la URL del historial central. Use ⚙️ Configurar conexión.",
+            "⚠️ Falta configurar la URL del historial central.",
             "#d68b00"
         );
 
         return;
-
     }
-
 
     if(!navigator.onLine) {
 
@@ -3534,19 +3664,13 @@ async function sincronizarHistorial(
         );
 
         return;
-
     }
-
 
     if(sincronizacionEnCurso) {
-
         return;
-
     }
 
-
     sincronizacionEnCurso = true;
-
 
     try {
 
@@ -3556,1770 +3680,107 @@ async function sincronizarHistorial(
                 "🔄 Sincronizando PC + teléfono...",
                 "#007c91"
             );
-
         }
 
+        /* 1. Obtener copia central mediante JSONP */
+        let historialCentral =
+            await obtenerHistorialCentralJSONP();
 
-        /* =====================================================
-           1. OBTENER HISTORIAL CENTRAL
-        ===================================================== */
-
-        const respuesta =
-            await fetch(
-                API_URL +
-                "?accion=obtener&_=" +
-                Date.now(),
-                {
-                    method: "GET",
-                    cache: "no-store"
-                }
-            );
-
-
-        if(!respuesta.ok) {
-
-            throw new Error(
-                "El servidor respondió con HTTP " +
-                respuesta.status
-            );
-
-        }
-
-
-        const resultado =
-            await respuesta.json();
-
-
-        if(!resultado.ok) {
-
-            throw new Error(
-                resultado.mensaje ||
-                "No se pudo obtener el historial central."
-            );
-
-        }
-
-
-        const historialCentral =
-            Array.isArray(
-                resultado.auditorias
-            )
-            ? resultado.auditorias
-            : [];
-
-
-        /* =====================================================
-           2. OBTENER HISTORIAL LOCAL
-        ===================================================== */
-
+        /* 2. Obtener copia local */
         const historialLocal =
             obtenerHistorial();
 
-
-        /* =====================================================
-           3. IDENTIFICAR QUÉ AUDITORÍAS YA EXISTEN
-        ===================================================== */
-
+        /* 3. Identificar lo que todavía no está en central */
         const idsCentral =
-            new Set();
-
-        historialCentral.forEach(
-            function(item) {
-
-                if(item && item.id) {
-
-                    idsCentral.add(
-                        String(item.id)
-                    );
-
-                }
-
-            }
-        );
-
-
-        /* =====================================================
-           4. ENVIAR AL SERVIDOR LAS AUDITORÍAS LOCALES
-              QUE TODAVÍA NO EXISTEN
-        ===================================================== */
+            new Set(
+                historialCentral
+                    .filter(item => item && item.id)
+                    .map(item => String(item.id))
+            );
 
         const pendientes =
             historialLocal.filter(
-                function(item) {
-
-                    return (
-                        item &&
-                        item.id &&
-                        !idsCentral.has(
-                            String(item.id)
-                        )
-                    );
-
-                }
+                item =>
+                    item &&
+                    item.id &&
+                    !idsCentral.has(String(item.id))
             );
 
+        /* 4. Enviar pendientes */
+        for(const pendiente of pendientes) {
 
-        for(
-            const pendiente of pendientes
-        ) {
-
-            const respuestaPost =
-                await fetch(
-                    API_URL,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "text/plain;charset=utf-8"
-                        },
-
-                        body: JSON.stringify({
-
-                            accion:
-                                "guardar",
-
-                            auditoria:
-                                pendiente
-
-                        })
-                    }
-                );
-
-
-            if(!respuestaPost.ok) {
-
-                throw new Error(
-                    "No se pudo enviar la auditoría " +
-                    pendiente.id +
-                    ". HTTP " +
-                    respuestaPost.status
-                );
-
-            }
-
-
-            const resultadoPost =
-                await respuestaPost.json();
-
-
-            if(!resultadoPost.ok) {
-
-                throw new Error(
-                    resultadoPost.mensaje ||
-                    "Google Apps Script rechazó la auditoría."
-                );
-
-            }
-
+            await enviarPOSTCentral({
+                accion: "guardar",
+                auditoria: pendiente
+            });
         }
 
-
-        /* =====================================================
-           5. VOLVER A CONSULTAR EL HISTORIAL CENTRAL
-              PARA OBTENER LA COPIA ACTUALIZADA
-        ===================================================== */
-
-        const respuestaFinal =
-            await fetch(
-                API_URL +
-                "?accion=obtener&_=" +
-                Date.now(),
-                {
-                    method: "GET",
-                    cache: "no-store"
-                }
-            );
-
-
-        if(!respuestaFinal.ok) {
-
-            throw new Error(
-                "No se pudo actualizar el historial después del envío."
-            );
-
+        /* 5. Dar tiempo al Apps Script para escribir */
+        if(pendientes.length > 0) {
+            await esperar(1500);
+            historialCentral =
+                await obtenerHistorialCentralJSONP();
         }
 
-
-        const resultadoFinal =
-            await respuestaFinal.json();
-
-
-        if(!resultadoFinal.ok) {
-
-            throw new Error(
-                resultadoFinal.mensaje ||
-                "No se pudo actualizar el historial central."
-            );
-
-        }
-
-
-        const historialActualizado =
-            Array.isArray(
-                resultadoFinal.auditorias
-            )
-            ? resultadoFinal.auditorias
-            : [];
-
-
-        /* =====================================================
-           6. GUARDAR COPIA CENTRAL EN EL DISPOSITIVO
-        ===================================================== */
-
+        /* 6. Fusionar central + local sin duplicados */
         const mapa =
             new Map();
 
+        historialCentral.forEach(item => {
 
-        historialActualizado.forEach(
-            function(item) {
-
-                if(item && item.id) {
-
-                    mapa.set(
-                        String(item.id),
-                        item
-                    );
-
-                }
-
+            if(item && item.id) {
+                mapa.set(
+                    String(item.id),
+                    item
+                );
             }
-        );
+        });
 
+        historialLocal.forEach(item => {
 
-        historialLocal.forEach(
-            function(item) {
-
-                if(item && item.id) {
-
-                    if(!mapa.has(
-                        String(item.id)
-                    )) {
-
-                        mapa.set(
-                            String(item.id),
-                            item
-                        );
-
-                    }
-
-                }
-
+            if(item && item.id && !mapa.has(String(item.id))) {
+                mapa.set(
+                    String(item.id),
+                    item
+                );
             }
-        );
+        });
 
-
-        const historialUnificado =
-            Array.from(
-                mapa.values()
-            );
-
+        const historialFinal =
+            Array.from(mapa.values());
 
         localStorage.setItem(
             CLAVE_HISTORIAL,
-            JSON.stringify(
-                historialUnificado
-            )
+            JSON.stringify(historialFinal)
         );
-
-
-        /* =====================================================
-           7. ACTUALIZAR PANTALLA
-        ===================================================== */
 
         actualizarContadorHistorial();
 
-
         actualizarEstadoSincronizacion(
-
-            "✅ Historial sincronizado: " +
-            historialUnificado.length +
-            " auditorías",
-
+            pendientes.length > 0
+                ? "🟢 Historial sincronizado. PC y teléfono están actualizados."
+                : "🟢 Historial actualizado correctamente.",
             "#16844b"
-
         );
 
-
-    }
-
-    catch(error) {
+    } catch(error) {
 
         console.error(
             "Error sincronizando historial:",
             error
         );
 
-
         actualizarEstadoSincronizacion(
-            "⚠️ No se pudo sincronizar.\n\n" +
-            "ERROR REAL: " +
-            error.message,
+            "⚠️ No se pudo sincronizar. Se mantiene el historial local.",
             "#d68b00"
-      );
+        );
 
+    } finally {
+
+        sincronizacionEnCurso = false;
     }
-
-    finally {
-
-        sincronizacionEnCurso =
-            false;
-
-    }
-
 }
 
-
-/* =========================================================
-   EVENTOS DE CONEXIÓN
-========================================================= */
-
-window.addEventListener(
-    "online",
-    function() {
-
-        sincronizarHistorial();
-
-    }
-);
-
-
-window.addEventListener(
-    "offline",
-    function() {
-
-        actualizarEstadoSincronizacion(
-
-            "📴 Sin Internet. Las auditorías se guardarán localmente.",
-
-            "#d68b00"
-
-        );
-
-    }
-);
-/* =========================================================
-   OBTENER HISTORIAL
-========================================================= */
-
-function obtenerHistorial() {
-
-    try {
-
-        const datos =
-            localStorage.getItem(
-                CLAVE_HISTORIAL
-            );
-
-
-        if(!datos) {
-
-            return [];
-
-        }
-
-
-        const historial =
-            JSON.parse(datos);
-
-
-        if(!Array.isArray(historial)) {
-
-            return [];
-
-        }
-
-
-        return historial;
-
-    }
-
-    catch(error) {
-
-        console.error(
-            "Error leyendo historial:",
-            error
-        );
-
-
-        return [];
-
-    }
-
-}
-
-
-/* =========================================================
-   ACTUALIZAR CONTADOR HISTORIAL
-========================================================= */
-
-function actualizarContadorHistorial() {
-
-    const historial =
-        obtenerHistorial();
-
-
-    const elemento =
-        document.getElementById(
-            "numeroHistorial"
-        );
-
-
-    if(elemento) {
-
-        elemento.textContent =
-            historial.length;
-
-    }
-
-
-    const mensaje =
-        document.getElementById(
-            "mensajeHistorial"
-        );
-
-
-    if(mensaje) {
-
-        mensaje.textContent =
-            "Total de auditorías guardadas: " +
-            historial.length;
-
-    }
-
-}
-
-
-/* =========================================================
-   CARGAR RESUMEN
-========================================================= */
-
-function cargarResumen() {
-
-    document.getElementById(
-        "resArea"
-    ).textContent =
-        auditoria.area;
-
-
-    document.getElementById(
-        "resDia"
-    ).textContent =
-        auditoria.dia;
-
-
-    document.getElementById(
-        "resTurno"
-    ).textContent =
-        auditoria.turno;
-
-
-    document.getElementById(
-        "resEquipo"
-    ).textContent =
-        auditoria.equipo;
-
-
-    document.getElementById(
-        "resSupervisor"
-    ).textContent =
-        auditoria.supervisor;
-
-
-    document.getElementById(
-        "resLider"
-    ).textContent =
-        auditoria.lider;
-
-
-    document.getElementById(
-        "resJefe"
-    ).textContent =
-        auditoria.jefe;
-
-
-    document.getElementById(
-        "resChecks"
-    ).textContent =
-        auditoria.checks +
-        " / 7";
-
-
-    document.getElementById(
-        "resEvaluacion"
-    ).textContent =
-        auditoria.evaluacion;
-
-
-    document.getElementById(
-        "resObservacionesRendimiento"
-    ).textContent =
-        auditoria.observacionesRendimiento ||
-        "Sin observaciones de rendimiento.";
-
-
-    document.getElementById(
-        "resObservacionesMOD"
-    ).textContent =
-        auditoria.observacionesMOD ||
-        "Sin observaciones generales de MOD.";
-
-
-    const tbody =
-        document.getElementById(
-            "resumenMOD"
-        );
-
-
-    tbody.innerHTML = "";
-
-
-    auditoria.mod.forEach(
-        function(item) {
-
-            const fila =
-                document.createElement("tr");
-
-
-            fila.innerHTML = `
-
-                <td>
-                    ${escapeHTML(item.linea || "")}
-                </td>
-
-                <td>
-                    ${escapeHTML(item.presentacion)}
-                </td>
-
-                <td>
-                    ${escapeHTML(item.estandar)}
-                </td>
-
-                <td>
-                    ${escapeHTML(item.personal)}
-                </td>
-
-                <td>
-                    ${escapeHTML(item.panerasMin)}
-                </td>
-
-                <td>
-                    ${item.teorico ? formatearNumero(item.teorico) : "—"}
-                </td>
-
-                <td>
-                    ${formatearNumero(item.kgHora)}
-                </td>
-
-                <td>
-
-                    ${
-                        item.cumplimiento === "Cumple"
-                        ? "✓ Cumple"
-                        : item.cumplimiento === "No Cumple"
-                            ? "✕ No Cumple"
-                            : "Pendiente"
-                    }
-
-                </td>
-
-            `;
-
-
-            tbody.appendChild(fila);
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   PROTEGER HTML
-========================================================= */
-
-function escapeHTML(text) {
-
-    return String(text)
-
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-
-        .replace(
-            /</g,
-            "&lt;"
-        )
-
-        .replace(
-            />/g,
-            "&gt;"
-        )
-
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
-}
-
-
-/* =========================================================
-   OBTENER RESPUESTA
-========================================================= */
-
-function obtenerRespuesta(nombre) {
-
-    const respuesta =
-        document.querySelector(
-            'input[name="' +
-            nombre +
-            '"]:checked'
-        );
-
-
-    return respuesta
-        ? respuesta.value
-        : "";
-
-}
-
-
-/* =========================================================
-   EXPORTAR AUDITORIA ACTUAL A EXCEL
-========================================================= */
-
-function exportarExcel() {
-
-    if(
-        typeof XLSX === "undefined"
-    ) {
-
-        alert(
-            "No se pudo cargar la herramienta de Excel. Verifique su conexión a Internet."
-        );
-
-        return;
-
-    }
-
-
-    /*
-    =========================================================
-    HOJA RESUMEN
-    =========================================================
-    */
-
-    const resumen = [
-
-        [
-            "PROMARISCO - SISTEMA DE AUDITORÍA OPERATIVA"
-        ],
-
-        [],
-
-        [
-            "INFORMACIÓN GENERAL"
-        ],
-
-        [
-            "Área",
-            auditoria.area
-        ],
-
-        [
-            "Día",
-            auditoria.dia
-        ],
-
-        [
-            "Turno",
-            auditoria.turno
-        ],
-
-        [
-            "Equipo",
-            auditoria.equipo
-        ],
-
-        [
-            "Supervisor",
-            auditoria.supervisor
-        ],
-
-        [
-            "Líder",
-            auditoria.lider
-        ],
-
-        [
-            "Jefe",
-            auditoria.jefe
-        ],
-
-        [],
-
-        [
-            "RENDIMIENTO"
-        ],
-
-        [
-            "Checks obtenidos",
-            auditoria.checks + " / 7"
-        ],
-
-        [
-            "Evaluación",
-            auditoria.evaluacion
-        ],
-
-        [
-            "Observaciones",
-            auditoria.observacionesRendimiento
-        ],
-
-        [],
-
-        [
-            "OBSERVACIONES GENERALES MOD",
-            auditoria.observacionesMOD
-        ]
-
-    ];
-
-
-    const wsResumen =
-        XLSX.utils.aoa_to_sheet(
-            resumen
-        );
-
-
-    /*
-    =========================================================
-    HOJA RENDIMIENTO
-    =========================================================
-    */
-
-    const preguntas = [
-
-        [
-            "Pregunta",
-            "Respuesta"
-        ],
-
-        [
-            "¿El liquidador de MP se encuentra en sitio al inicio del abastecimiento?",
-            obtenerRespuesta("p1")
-        ],
-
-        [
-            "¿El liquidador de MP coloca la hora de inicio de abastecimiento real?",
-            obtenerRespuesta("p2")
-        ],
-
-        [
-            "¿El liquidador de MP coloca el tipo de congelación de cada presentación?",
-            obtenerRespuesta("p3")
-        ],
-
-        [
-            "¿El liquidador de MP anota los tiempos reales de las paralizaciones durante la congelación de una presentación?",
-            obtenerRespuesta("p4")
-        ],
-
-        [
-            "¿El liquidador de MP tiene conocimiento del motivo de las paralizaciones en la línea de congelación?",
-            obtenerRespuesta("p5")
-        ],
-
-        [
-            "¿Coinciden los datos tomados por el auditor con los del liquidador de MP?",
-            obtenerRespuesta("p6")
-        ],
-
-        [
-            "¿La información registrada por el liquidador de MP se encuentra completa y correctamente diligenciada?",
-            obtenerRespuesta("p7")
-        ],
-
-        [],
-
-        [
-            "Checks obtenidos",
-            auditoria.checks
-        ],
-
-        [
-            "Evaluación",
-            auditoria.evaluacion
-        ],
-
-        [
-            "Observaciones",
-            auditoria.observacionesRendimiento
-        ]
-
-    ];
-
-
-    const wsRendimiento =
-        XLSX.utils.aoa_to_sheet(
-            preguntas
-        );
-
-
-    /*
-    =========================================================
-    HOJA MOD
-    =========================================================
-    */
-
-    const datosMOD = [
-
-        [
-
-            "Línea",
-
-            "Presentación",
-
-            "Kg presentación",
-
-            "Tipo de cálculo",
-
-            "MOD Estándar",
-
-            "MOD Personal",
-
-            "Paneras / min",
-
-            "Kg/h Teórico",
-
-            "Bases",
-
-            "Carriles",
-
-            "Minutos",
-
-            "Kg / h",
-
-            "Cumplimiento",
-
-            "Observaciones"
-
-        ]
-
-    ];
-
-
-    auditoria.mod.forEach(
-        function(item) {
-
-            datosMOD.push([
-
-                item.linea || "",
-
-                item.presentacion,
-
-                Number(item.kilos),
-
-                item.tipo === "BASES"
-                    ? "×4 bases ×4 carriles"
-                    : "×4 carriles",
-
-                Number(item.estandar),
-
-                Number(item.personal),
-
-                Number(item.panerasMin),
-
-                Number(item.teorico) || 0,
-
-                item.tipo === "BASES"
-                    ? 4
-                    : "-",
-
-                4,
-
-                60,
-
-                Number(
-                    item.kgHora.toFixed(2)
-                ),
-
-                item.cumplimiento
-
-            ]);
-
-        }
-    );
-
-
-    const wsMOD =
-        XLSX.utils.aoa_to_sheet(
-            datosMOD
-        );
-
-
-    /*
-    =========================================================
-    ANCHO COLUMNAS
-    =========================================================
-    */
-
-    wsResumen["!cols"] = [
-
-        {
-            wch: 35
-        },
-
-        {
-            wch: 60
-        }
-
-    ];
-
-
-    wsRendimiento["!cols"] = [
-
-        {
-            wch: 95
-        },
-
-        {
-            wch: 20
-        }
-
-    ];
-
-
-    wsMOD["!cols"] = [
-
-        {
-            wch: 20
-        },
-
-        {
-            wch: 18
-        },
-
-        {
-            wch: 25
-        },
-
-        {
-            wch: 18
-        },
-
-        {
-            wch: 20
-        },
-
-        {
-            wch: 18
-        },
-
-        {
-            wch: 12
-        },
-
-        {
-            wch: 12
-        },
-
-        {
-            wch: 12
-        },
-
-        {
-            wch: 15
-        },
-
-        {
-            wch: 18
-        },
-
-        {
-            wch: 40
-        }
-
-    ];
-
-
-    /*
-    =========================================================
-    CREAR LIBRO
-    =========================================================
-    */
-
-    const libro =
-        XLSX.utils.book_new();
-
-
-    XLSX.utils.book_append_sheet(
-
-        libro,
-
-        wsResumen,
-
-        "Resumen"
-
-    );
-
-
-    XLSX.utils.book_append_sheet(
-
-        libro,
-
-        wsRendimiento,
-
-        "Rendimiento"
-
-    );
-
-
-    XLSX.utils.book_append_sheet(
-
-        libro,
-
-        wsMOD,
-
-        "Cumplimiento MOD"
-
-    );
-
-
-    /*
-    =========================================================
-    NOMBRE DEL ARCHIVO
-    =========================================================
-    */
-
-    const fecha =
-        auditoria.dia ||
-        new Date()
-            .toISOString()
-            .slice(0,10);
-
-
-    const area =
-        auditoria.area
-            .replaceAll("/", "-")
-            .replaceAll(" ", "_");
-
-
-    const equipo =
-        auditoria.equipo
-            .replaceAll(" ", "_");
-
-
-    const nombreArchivo =
-
-        "Auditoria_" +
-
-        area +
-
-        "_" +
-
-        equipo +
-
-        "_" +
-
-        fecha +
-
-        ".xlsx";
-
-
-    /*
-    =========================================================
-    DESCARGAR
-    =========================================================
-    */
-
-    XLSX.writeFile(
-
-        libro,
-
-        nombreArchivo
-
-    );
-
-}
-
-
-/* =========================================================
-   EXPORTAR TODO EL HISTORIAL
-========================================================= */
-
-function exportarHistorialExcel() {
-
-    if(
-        typeof XLSX === "undefined"
-    ) {
-
-        alert(
-            "No se pudo cargar la herramienta de Excel. Verifique su conexión a Internet."
-        );
-
-        return;
-
-    }
-
-
-    const historial =
-        obtenerHistorial();
-
-
-    if(historial.length === 0) {
-
-        alert(
-            "No existen auditorías guardadas en el historial."
-        );
-
-        return;
-
-    }
-
-
-    /*
-    =========================================================
-    HOJA 1 - HISTORIAL
-    UNA FILA POR PRESENTACIÓN
-    =========================================================
-    */
-
-    const historialDatos = [
-
-        [
-
-            "ID Auditoría",
-
-            "Fecha registro",
-
-            "Día",
-
-            "Área",
-
-            "Turno",
-
-            "Equipo",
-
-            "Supervisor",
-
-            "Líder",
-
-            "Jefe",
-
-            "Checks",
-
-            "Evaluación",
-
-            "Línea",
-
-            "Presentación",
-
-            "Kg presentación",
-
-            "Tipo cálculo",
-
-            "Estándar MOD",
-
-            "Personal",
-
-            "Paneras/min",
-
-            "Kg/h",
-
-            "Cumplimiento",
-
-            "Observaciones Rendimiento",
-
-            "Observaciones Generales MOD"
-
-        ]
-
-    ];
-
-
-    historial.forEach(
-        function(aud) {
-
-            if(
-                aud.mod &&
-                aud.mod.length > 0
-            ) {
-
-                aud.mod.forEach(
-                    function(item) {
-
-                        historialDatos.push([
-
-                            aud.id || "",
-
-                            aud.fechaRegistro || "",
-
-                            aud.dia || "",
-
-                            aud.area || "",
-
-                            aud.turno || "",
-
-                            aud.equipo || "",
-
-                            aud.supervisor || "",
-
-                            aud.lider || "",
-
-                            aud.jefe || "",
-
-                            aud.checks || 0,
-
-                            aud.evaluacion || "",
-
-                            item.linea || "",
-
-                            item.presentacion || "",
-
-                            Number(item.kilos) || 0,
-
-                            item.tipo === "BASES"
-                                ? "×4 bases ×4 carriles"
-                                : "×4 carriles",
-
-                            Number(item.estandar) || 0,
-
-                            Number(item.personal) || 0,
-
-                            Number(item.panerasMin) || 0,
-
-                            Number(
-                                Number(item.kgHora || 0)
-                                .toFixed(2)
-                            ),
-
-                            item.cumplimiento || "",
-
-                            aud.observacionesRendimiento || "",
-
-                            aud.observacionesMOD || ""
-
-                        ]);
-
-                    }
-                );
-
-            }
-
-            else {
-
-                historialDatos.push([
-
-                    aud.id || "",
-
-                    aud.fechaRegistro || "",
-
-                    aud.dia || "",
-
-                    aud.area || "",
-
-                    aud.turno || "",
-
-                    aud.equipo || "",
-
-                    aud.supervisor || "",
-
-                    aud.lider || "",
-
-                    aud.jefe || "",
-
-                    aud.checks || 0,
-
-                    aud.evaluacion || "",
-
-                    "",
-
-                    "",
-
-                    "",
-
-                    "",
-
-                    "",
-
-                    "",
-
-                    "",
-
-                    "",
-
-                    "",
-
-                    aud.observacionesRendimiento || "",
-
-                    aud.observacionesMOD || ""
-
-                ]);
-
-            }
-
-        }
-    );
-
-
-    const wsHistorial =
-        XLSX.utils.aoa_to_sheet(
-            historialDatos
-        );
-
-
-    wsHistorial["!cols"] = [
-
-        {wch:18},
-        {wch:22},
-        {wch:14},
-        {wch:20},
-        {wch:12},
-        {wch:22},
-        {wch:25},
-        {wch:25},
-        {wch:25},
-        {wch:10},
-        {wch:18},
-        {wch:20},
-        {wch:18},
-        {wch:25},
-        {wch:18},
-        {wch:15},
-        {wch:15},
-        {wch:18},
-        {wch:18},
-        {wch:40},
-        {wch:60},
-        {wch:60}
-
-    ];
-
-
-    /*
-    =========================================================
-    HOJA 2 - AUDITORIAS
-    UNA FILA POR AUDITORÍA
-    =========================================================
-    */
-
-    const auditoriasDatos = [
-
-        [
-
-            "ID",
-
-            "Fecha registro",
-
-            "Día",
-
-            "Área",
-
-            "Turno",
-
-            "Equipo",
-
-            "Supervisor",
-
-            "Líder",
-
-            "Jefe",
-
-            "Checks",
-
-            "Evaluación",
-
-            "Observaciones Rendimiento",
-
-            "Observaciones MOD",
-
-            "Cantidad Presentaciones"
-
-        ]
-
-    ];
-
-
-    historial.forEach(
-        function(aud) {
-
-            auditoriasDatos.push([
-
-                aud.id || "",
-
-                aud.fechaRegistro || "",
-
-                aud.dia || "",
-
-                aud.area || "",
-
-                aud.turno || "",
-
-                aud.equipo || "",
-
-                aud.supervisor || "",
-
-                aud.lider || "",
-
-                aud.jefe || "",
-
-                aud.checks || 0,
-
-                aud.evaluacion || "",
-
-                aud.observacionesRendimiento || "",
-
-                aud.observacionesMOD || "",
-
-                aud.mod
-                    ? aud.mod.length
-                    : 0
-
-            ]);
-
-        }
-    );
-
-
-    const wsAuditorias =
-        XLSX.utils.aoa_to_sheet(
-            auditoriasDatos
-        );
-
-
-    wsAuditorias["!cols"] = [
-
-        {wch:18},
-        {wch:22},
-        {wch:14},
-        {wch:20},
-        {wch:12},
-        {wch:22},
-        {wch:25},
-        {wch:25},
-        {wch:25},
-        {wch:10},
-        {wch:18},
-        {wch:60},
-        {wch:60},
-        {wch:22}
-
-    ];
-
-
-    /*
-    =========================================================
-    HOJA 3 - RENDIMIENTO
-    =========================================================
-    */
-
-    const rendimientoDatos = [
-
-        [
-
-            "ID Auditoría",
-
-            "Día",
-
-            "Área",
-
-            "Equipo",
-
-            "Pregunta",
-
-            "Respuesta",
-
-            "Checks",
-
-            "Evaluación"
-
-        ]
-
-    ];
-
-
-    historial.forEach(
-        function(aud) {
-
-            if(
-                aud.preguntas &&
-                aud.preguntas.length > 0
-            ) {
-
-                aud.preguntas.forEach(
-                    function(p) {
-
-                        rendimientoDatos.push([
-
-                            aud.id || "",
-
-                            aud.dia || "",
-
-                            aud.area || "",
-
-                            aud.equipo || "",
-
-                            "Pregunta " + p.numero,
-
-                            p.respuesta || "",
-
-                            aud.checks || 0,
-
-                            aud.evaluacion || ""
-
-                        ]);
-
-                    }
-                );
-
-            }
-
-        }
-    );
-
-
-    const wsRendimientoHistorial =
-        XLSX.utils.aoa_to_sheet(
-            rendimientoDatos
-        );
-
-
-    wsRendimientoHistorial["!cols"] = [
-
-        {wch:18},
-        {wch:14},
-        {wch:20},
-        {wch:22},
-        {wch:18},
-        {wch:15},
-        {wch:12},
-        {wch:18}
-
-    ];
-
-
-    /*
-    =========================================================
-    HOJA 4 - MOD
-    =========================================================
-    */
-
-    const modHistorialDatos = [
-
-        [
-
-            "ID Auditoría",
-
-            "Día",
-
-            "Área",
-
-            "Equipo",
-
-            "Línea",
-
-            "Presentación",
-
-            "Kg",
-
-            "Tipo",
-
-            "Estándar MOD",
-
-            "Personal",
-
-            "Paneras/min",
-
-            "Kg/h",
-
-            "Cumplimiento"
-
-        ]
-
-    ];
-
-
-    historial.forEach(
-        function(aud) {
-
-            if(aud.mod) {
-
-                aud.mod.forEach(
-                    function(item) {
-
-                        modHistorialDatos.push([
-
-                            aud.id || "",
-
-                            aud.dia || "",
-
-                            aud.area || "",
-
-                            aud.equipo || "",
-
-                            item.linea || "",
-
-                            item.presentacion || "",
-
-                            Number(item.kilos) || 0,
-
-                            item.tipo || "",
-
-                            Number(item.estandar) || 0,
-
-                            Number(item.personal) || 0,
-
-                            Number(item.panerasMin) || 0,
-
-                            Number(
-                                Number(item.kgHora || 0)
-                                .toFixed(2)
-                            ),
-
-                            item.cumplimiento || ""
-
-                        ]);
-
-                    }
-                );
-
-            }
-
-        }
-    );
-
-
-    const wsMODHistorial =
-        XLSX.utils.aoa_to_sheet(
-            modHistorialDatos
-        );
-
-
-    wsMODHistorial["!cols"] = [
-
-        {wch:18},
-        {wch:14},
-        {wch:20},
-        {wch:22},
-        {wch:20},
-        {wch:12},
-        {wch:18},
-        {wch:18},
-        {wch:15},
-        {wch:15},
-        {wch:18},
-        {wch:18},
-        {wch:45}
-
-    ];
-
-
-    /*
-    =========================================================
-    CREAR LIBRO
-    =========================================================
-    */
-
-    const libro =
-        XLSX.utils.book_new();
-
-
-    XLSX.utils.book_append_sheet(
-
-        libro,
-
-        wsHistorial,
-
-        "Historial"
-
-    );
-
-
-    XLSX.utils.book_append_sheet(
-
-        libro,
-
-        wsAuditorias,
-
-        "Auditorías"
-
-    );
-
-
-    XLSX.utils.book_append_sheet(
-
-        libro,
-
-        wsRendimientoHistorial,
-
-        "Rendimiento"
-
-    );
-
-
-    XLSX.utils.book_append_sheet(
-
-        libro,
-
-        wsMODHistorial,
-
-        "Cumplimiento MOD"
-
-    );
-
-
-    /*
-    =========================================================
-    NOMBRE DEL ARCHIVO
-    =========================================================
-    */
-
-    const fecha =
-        new Date()
-            .toISOString()
-            .slice(0,10);
-
-
-    const nombreArchivo =
-        "Auditorias_Promarisco_Historial_" +
-        fecha +
-        ".xlsx";
-
-
-    /*
-    =========================================================
-    DESCARGAR
-    =========================================================
-    */
-
-    XLSX.writeFile(
-
-        libro,
-
-        nombreArchivo
-
-    );
-
-
-    alert(
-
-        "Excel generado correctamente.\n\n" +
-
-        "Auditorías incluidas: " +
-        historial.length
-
-    );
-
-}
 
 
 /* =========================================================
@@ -5396,39 +3857,20 @@ async function borrarHistorial() {
             );
 
 
-            const respuesta =
-                await fetch(
-                    API_URL,
-                    {
-                        method: "POST",
+            await enviarPOSTCentral({
+                accion: "borrarTodo"
+            });
 
-                        headers: {
-                            "Content-Type":
-                                "text/plain;charset=utf-8"
-                        },
+            await esperar(1500);
 
-                        body: JSON.stringify({
+            /* Confirmamos consultando el historial mediante JSONP. */
+            const historialCentral =
+                await obtenerHistorialCentralJSONP();
 
-                            accion:
-                                "borrarTodo"
-
-                        })
-
-                    }
-                );
-
-
-            const resultado =
-                await respuesta.json();
-
-
-            if(!resultado.ok) {
-
+            if(historialCentral.length > 0) {
                 throw new Error(
-                    resultado.mensaje ||
-                    "No se pudo borrar el historial central."
+                    "Google Apps Script todavía muestra auditorías en el historial central."
                 );
-
             }
 
 
