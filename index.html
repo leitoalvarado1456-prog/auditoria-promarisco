@@ -1902,7 +1902,7 @@ let API_URL = localStorage.getItem("promariscoAPIURL") || "https://script.google
 let sincronizacionEnCurso = false;
 
 function configurarURLHistorial(){
-    const actual = API_URL || "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec";
+    const actual = API_URL || "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec"";
     const nuevaURL = prompt(
         "Pegue aquí la URL del Web App de Google Apps Script:\n\n" +
         "Ejemplo: https://script.google.com/macros/s/XXXXXXXX/exec",
@@ -1914,7 +1914,7 @@ function configurarURLHistorial(){
     const url = nuevaURL.trim();
 
     if(url === "") {
-        API_URL = "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec";
+        API_URL = "https://script.google.com/macros/s/AKfycbyN92jAXNQsF_ouiGzAoUo-LVb9vgD3qPEoNqcjniNfkjh4atqRDEzAgIThfExBJPdZ/exec"";
         localStorage.removeItem("promariscoAPIURL");
         actualizarEstadoSincronizacion(
             "🟠 Conexión central desactivada. Solo se guardará localmente.",
