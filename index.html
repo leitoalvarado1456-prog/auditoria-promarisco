@@ -3400,444 +3400,206 @@ function actualizarEstadoSincronizacion(
 
 /* =========================================================
    SINCRONIZAR UNA AUDITORÍA CON EL SERVIDOR
-   Se usa POST no-cors para evitar el bloqueo CORS de Apps Script.
-   La confirmación se realiza después mediante GET + JSONP.
+   Se usa POST no-cors para evitar el bloqueo CORS del navegador.
+   La confirmación se hace posteriormente mediante JSONP.
 ========================================================= */
-
-function enviarAuditoriaNoCors(auditoriaParaEnviar){
-
-    return fetch(
-        API_URL,
-        {
-            method: "POST",
-            mode: "no-cors",
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8"
-            },
-            body: JSON.stringify({
-                accion: "guardar",
-                auditoria: auditoriaParaEnviar
-            })
-        }
-    );
-
-}
-
-
-/* =========================================================
-   OBTENER HISTORIAL CENTRAL MEDIANTE JSONP
-========================================================= */
-
-function obtenerHistorialCentralJSONP(){
-
-    return new Promise(function(resolve, reject){
-
-        if(!API_URL){
-            reject(new Error("Falta configurar la URL del historial central."));
-            return;
-        }
-
-        const callbackName =
-            "promariscoJSONP_" +
-            Date.now() + "_" +
-            Math.floor(Math.random() * 100000);
-
-        const script = document.createElement("script");
-
-        const timeout = setTimeout(function(){
-
-            limpiar();
-
-            reject(
-                new Error("Tiempo de espera agotado al consultar Google Sheets.")
-            );
-
-        }, 20000);
-
-
-        function limpiar(){
-
-            clearTimeout(timeout);
-
-            try{
-                delete window[callbackName];
-            }catch(e){
-                window[callbackName] = undefined;
-            }
-
-            if(script.parentNode){
-                script.parentNode.removeChild(script);
-            }
-
-        }
-
-
-        window[callbackName] = function(resultado){
-
-            limpiar();
-
-            if(!resultado || !resultado.ok){
-                reject(
-                    new Error(
-                        resultado?.mensaje ||
-                        "Google Apps Script no pudo devolver el historial."
-                    )
-                );
-                return;
-            }
-
-            resolve(resultado);
-
-        };
-
-
-        script.onerror = function(){
-
-            limpiar();
-
-            reject(
-                new Error("No se pudo conectar con el Web App de Google Apps Script.")
-            );
-
-        };
-
-
-        script.src =
-            API_URL +
-            "?accion=obtener&callback=" +
-            encodeURIComponent(callbackName) +
-            "&_=" +
-            Date.now();
-
-        document.head.appendChild(script);
-
-    });
-
-}
-
-
-/* =========================================================
-   SINCRONIZAR UNA AUDITORÍA CON EL SERVIDOR
-========================================================= */
-
-async function sincronizarAuditoriaConServidor(
-    auditoriaParaEnviar
-){
-
+async function sincronizarAuditoriaConServidor(auditoriaParaEnviar){
     if(!API_URL){
-
         actualizarEstadoSincronizacion(
             "⚠️ Falta configurar la URL del historial central.",
             "#d68b00"
         );
-
         return;
-
     }
 
-
     if(!navigator.onLine){
-
         actualizarEstadoSincronizacion(
             "📴 Sin Internet. Auditoría guardada localmente y pendiente de sincronización.",
             "#d68b00"
         );
-
         return;
-
     }
 
-
     try{
-
         actualizarEstadoSincronizacion(
             "🔄 Guardando auditoría en el historial central...",
             "#007c91"
         );
 
-
-        /*
-           Apps Script puede redirigir el POST y el navegador puede bloquear
-           la respuesta por CORS. Por eso NO intentamos leer respuesta.json().
-           Solo enviamos el POST y luego verificamos mediante JSONP.
-        */
-
-        await enviarAuditoriaNoCors(
-            auditoriaParaEnviar
-        );
-
-
-        /*
-           Esperamos un instante para que Apps Script termine appendRow().
-        */
-
-        await new Promise(function(resolve){
-            setTimeout(resolve, 700);
+        await enviarPOSTSinCORS({
+            accion:"guardar",
+            auditoria:auditoriaParaEnviar
         });
 
+        await esperar(1000);
+        await sincronizarHistorial(true);
 
-        const resultado =
-            await obtenerHistorialCentralJSONP();
-
-
-        const existe =
-            Array.isArray(resultado.auditorias) &&
-            resultado.auditorias.some(function(item){
-                return item &&
-                       String(item.id) ===
-                       String(auditoriaParaEnviar.id);
-            });
-
-
-        if(!existe){
-            throw new Error(
-                "La auditoría todavía no aparece en el historial central."
-            );
-        }
-
-
-        await sincronizarHistorial(false);
-
-    }
-    catch(error){
-
-        console.error(
-            "Error sincronizando auditoría:",
-            error
-        );
-
+    }catch(error){
+        console.error("Error sincronizando auditoría:",error);
         actualizarEstadoSincronizacion(
-            "⚠️ No se pudo sincronizar ahora. Quedó guardada localmente.",
+            "⚠️ No se pudo sincronizar. La auditoría permanece guardada localmente.",
             "#d68b00"
         );
-
     }
-
 }
 
+/* =========================================================
+   POST SIN CORS
+========================================================= */
+function enviarPOSTSinCORS(datos){
+    return fetch(API_URL,{
+        method:"POST",
+        mode:"no-cors",
+        headers:{
+            "Content-Type":"text/plain;charset=utf-8"
+        },
+        body:JSON.stringify(datos)
+    });
+}
+
+function esperar(ms){
+    return new Promise(resolve=>setTimeout(resolve,ms));
+}
+
+/* =========================================================
+   OBTENER HISTORIAL CENTRAL MEDIANTE JSONP
+========================================================= */
+function obtenerHistorialCentralJSONP(){
+    return new Promise((resolve,reject)=>{
+        if(!API_URL){
+            reject(new Error("Falta configurar la URL central."));
+            return;
+        }
+
+        const callback="promariscoJSONP_"+Date.now()+"_"+
+            Math.random().toString(36).substring(2,8);
+        const script=document.createElement("script");
+        const timeout=setTimeout(()=>{
+            limpiar();
+            reject(new Error("Tiempo de espera agotado al consultar Google Apps Script."));
+        },15000);
+
+        function limpiar(){
+            clearTimeout(timeout);
+            try{delete window[callback];}catch(e){window[callback]=undefined;}
+            if(script.parentNode)script.parentNode.removeChild(script);
+        }
+
+        window[callback]=function(resultado){
+            limpiar();
+            if(!resultado || resultado.ok!==true){
+                reject(new Error(resultado?.mensaje||"Google Apps Script devolvió una respuesta no válida."));
+                return;
+            }
+            resolve(resultado);
+        };
+
+        script.onerror=function(){
+            limpiar();
+            reject(new Error("No se pudo conectar con Google Apps Script mediante JSONP."));
+        };
+
+        script.src=API_URL+
+            "?accion=obtener&callback="+
+            encodeURIComponent(callback)+
+            "&_="+Date.now();
+
+        document.head.appendChild(script);
+    });
+}
 
 /* =========================================================
    SINCRONIZAR HISTORIAL COMPLETO
 ========================================================= */
-
-async function sincronizarHistorial(
-    mostrarMensaje = true
-){
-
+async function sincronizarHistorial(mostrarMensaje=true){
     if(!API_URL){
-
         actualizarEstadoSincronizacion(
             "⚠️ Falta configurar la URL del historial central. Use ⚙️ Configurar conexión.",
             "#d68b00"
         );
-
         return;
-
     }
 
-
     if(!navigator.onLine){
-
         actualizarEstadoSincronizacion(
             "📴 Sin Internet. Se conserva el historial local.",
             "#d68b00"
         );
-
-        return;
-
-    }
-
-
-    if(sincronizacionEnCurso){
         return;
     }
 
-
-    sincronizacionEnCurso = true;
-
+    if(sincronizacionEnCurso)return;
+    sincronizacionEnCurso=true;
 
     try{
-
         if(mostrarMensaje){
-
             actualizarEstadoSincronizacion(
                 "🔄 Sincronizando PC + teléfono...",
                 "#007c91"
             );
-
         }
 
+        /* 1. Leer historial central */
+        const resultado=await obtenerHistorialCentralJSONP();
+        const historialCentral=Array.isArray(resultado.auditorias)
+            ? resultado.auditorias : [];
+        const historialLocal=obtenerHistorial();
 
-        /* =====================================================
-           1. OBTENER HISTORIAL CENTRAL
-        ===================================================== */
+        const idsCentral=new Set(
+            historialCentral.filter(x=>x&&x.id).map(x=>String(x.id))
+        );
 
-        const resultado =
-            await obtenerHistorialCentralJSONP();
-
-
-        const historialCentral =
-            Array.isArray(resultado.auditorias)
-            ? resultado.auditorias
-            : [];
-
-
-        /* =====================================================
-           2. OBTENER HISTORIAL LOCAL
-        ===================================================== */
-
-        const historialLocal =
-            obtenerHistorial();
-
-
-        /* =====================================================
-           3. IDENTIFICAR QUÉ AUDITORÍAS YA EXISTEN
-        ===================================================== */
-
-        const idsCentral = new Set();
-
-        historialCentral.forEach(function(item){
-
-            if(item && item.id){
-                idsCentral.add(String(item.id));
-            }
-
-        });
-
-
-        /* =====================================================
-           4. ENVIAR AL SERVIDOR LAS AUDITORÍAS LOCALES
-              QUE TODAVÍA NO EXISTEN
-        ===================================================== */
-
-        const pendientes =
-            historialLocal.filter(function(item){
-
-                return item &&
-                       item.id &&
-                       !idsCentral.has(String(item.id));
-
-            });
-
+        /* 2. Enviar pendientes */
+        const pendientes=historialLocal.filter(item=>
+            item&&item.id&&!idsCentral.has(String(item.id))
+        );
 
         for(const pendiente of pendientes){
-
-            await enviarAuditoriaNoCors(
-                pendiente
-            );
-
-            /*
-               Pequeña pausa para no mandar varias solicitudes
-               demasiado juntas a Apps Script.
-            */
-
-            await new Promise(function(resolve){
-                setTimeout(resolve, 500);
+            await enviarPOSTSinCORS({
+                accion:"guardar",
+                auditoria:pendiente
             });
-
+            await esperar(700);
         }
 
+        /* 3. Volver a leer el central */
+        const resultadoFinal=await obtenerHistorialCentralJSONP();
+        const historialActualizado=Array.isArray(resultadoFinal.auditorias)
+            ? resultadoFinal.auditorias : [];
 
-        /* =====================================================
-           5. VOLVER A CONSULTAR EL HISTORIAL CENTRAL
-              PARA OBTENER LA COPIA ACTUALIZADA
-        ===================================================== */
-
-        const resultadoFinal =
-            await obtenerHistorialCentralJSONP();
-
-
-        const historialActualizado =
-            Array.isArray(resultadoFinal.auditorias)
-            ? resultadoFinal.auditorias
-            : [];
-
-
-        /* =====================================================
-           6. UNIFICAR CENTRAL + LOCAL
-        ===================================================== */
-
-        const mapa = new Map();
-
-
-        historialActualizado.forEach(function(item){
-
-            if(item && item.id){
-
-                mapa.set(
-                    String(item.id),
-                    item
-                );
-
+        /* 4. Unificar central + local sin perder auditorías locales */
+        const mapa=new Map();
+        historialActualizado.forEach(item=>{
+            if(item&&item.id)mapa.set(String(item.id),item);
+        });
+        historialLocal.forEach(item=>{
+            if(item&&item.id&&!mapa.has(String(item.id))){
+                mapa.set(String(item.id),item);
             }
-
         });
 
-
-        historialLocal.forEach(function(item){
-
-            if(item && item.id){
-
-                if(!mapa.has(String(item.id))){
-
-                    mapa.set(
-                        String(item.id),
-                        item
-                    );
-
-                }
-
-            }
-
-        });
-
-
-        const historialUnificado =
-            Array.from(mapa.values());
-
-
+        const historialUnificado=Array.from(mapa.values());
         localStorage.setItem(
             CLAVE_HISTORIAL,
             JSON.stringify(historialUnificado)
         );
 
-
-        /* =====================================================
-           7. ACTUALIZAR PANTALLA
-        ===================================================== */
-
         actualizarContadorHistorial();
-
-
         actualizarEstadoSincronizacion(
-            "✅ Historial sincronizado: " +
-            historialUnificado.length +
-            " auditorías",
+            "✅ Historial sincronizado: "+historialUnificado.length+" auditorías",
             "#16844b"
         );
 
-    }
-    catch(error){
-
-        console.error(
-            "Error sincronizando historial:",
-            error
-        );
-
+    }catch(error){
+        console.error("Error sincronizando historial:",error);
         actualizarEstadoSincronizacion(
-            "⚠️ No se pudo sincronizar. Las auditorías permanecen guardadas localmente.",
+            "⚠️ No se pudo sincronizar. Las auditorías permanecen guardadas localmente.\n\nERROR REAL: "+error.message,
             "#d68b00"
         );
-
+    }finally{
+        sincronizacionEnCurso=false;
     }
-    finally{
-
-        sincronizacionEnCurso = false;
-
-    }
-
 }
-
 
 /* =========================================================
    EVENTOS DE CONEXIÓN
@@ -5365,40 +5127,11 @@ async function borrarHistorial() {
             );
 
 
-            const respuesta =
-                await fetch(
-                    API_URL,
-                    {
-                        method: "POST",
+            await enviarPOSTSinCORS({
+                accion:"borrartodo"
+            });
 
-                        headers: {
-                            "Content-Type":
-                                "text/plain;charset=utf-8"
-                        },
-
-                        body: JSON.stringify({
-
-                            accion:
-                                "borrarTodo"
-
-                        })
-
-                    }
-                );
-
-
-            const resultado =
-                await respuesta.json();
-
-
-            if(!resultado.ok) {
-
-                throw new Error(
-                    resultado.mensaje ||
-                    "No se pudo borrar el historial central."
-                );
-
-            }
+            await esperar(1000);
 
 
             actualizarEstadoSincronizacion(
