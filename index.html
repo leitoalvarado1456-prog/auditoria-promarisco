@@ -5967,7 +5967,12 @@ function configurarRendimientoPorArea(){
     /* =====================================================
        RECEPCIÓN
     ===================================================== */
+if(areaActual === 'RECEPCION'){
 
+        titulo.textContent = 'RENDIMIENTO';
+        subtitulo.textContent = 'Observación general de recepción.';
+
+        card.innerHTML = `
 
             <div class="campo">
 
