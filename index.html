@@ -5276,11 +5276,11 @@ const MOD_FRIGOESCANDIA_PRESENTACIONES = [
 /* =========================================================
    RECEPCIÓN
    DÍA = PESCA VIVA / 31
-   NOCHE = RECEPCIÓN DE BINES / 38
+   NOCHE = TRADICIONAL  / 38
 ========================================================= */
 const MOD_RECEPCION = {
-    dia: {turno:"DIA", estandar:"PESCA VIVA", valor:31},
-    noche: {turno:"NOCHE", estandar:"RECEPCIÓN DE BINES", valor:38}
+    dia: {turno:"Pesca Viva", estandar:"PESCA VIVA", valor:31},
+    noche: {turno:"Tradicional", estandar:"TRADICIONAL", valor:38}
 };
 
 /* =========================================================
@@ -5308,33 +5308,33 @@ function crearTablaRecepcionMOD(){
                 <tr>
                     <td><strong>DIA</strong></td>
                     <td>
-                        <select id="estandarRecepcionDia" onchange="cambioEstandarRecepcion('dia')">
+                        <select id="estandarRecepcionPESCA VIVA" onchange="cambioEstandarRecepcion('PESCA VIVA')">
                             <option value="">Seleccione...</option>
                             <option value="PESCA VIVA" data-estandar="31">PESCA VIVA</option>
                         </select>
                         <div class="mod-referencia">Estándar: <strong>31</strong> personas</div>
                     </td>
-                    <td><input id="personalRecepcionDia" type="number" min="0" step="1" placeholder="Personal"></td>
-                    <td><div id="cumplimientoRecepcionDia" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
+                    <td><input id="personalRecepcionPESCA VIVA" type="number" min="0" step="1" placeholder="Personal"></td>
+                    <td><div id="cumplimientoRecepcionPESCA VIVA" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
                 </tr>
                 <tr>
                     <td><strong>NOCHE</strong></td>
                     <td>
-                        <select id="estandarRecepcionNoche" onchange="cambioEstandarRecepcion('noche')">
+                        <select id="estandarRecepcionTRADICIONAL" onchange="cambioEstandarRecepcion('TRADICIONAL')">
                             <option value="">Seleccione...</option>
-                            <option value="RECEPCIÓN DE BINES" data-estandar="38">RECEPCIÓN DE BINES</option>
+                            <option value="TRADICIONAL" data-estandar="38">TRADICIONAL</option>
                         </select>
                         <div class="mod-referencia">Estándar: <strong>38</strong> personas</div>
                     </td>
-                    <td><input id="personalRecepcionNoche" type="number" min="0" step="1" placeholder="Personal"></td>
-                    <td><div id="cumplimientoRecepcionNoche" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
+                    <td><input id="personalRecepcionTRADICIONAL" type="number" min="0" step="1" placeholder="Personal"></td>
+                    <td><div id="cumplimientoRecepcionTRADICIONAL" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
                 </tr>
             </tbody>
         </table>
         </div>`;
 
-    document.getElementById("personalRecepcionDia").addEventListener("input",()=>actualizarCumplimientoRecepcion("dia"));
-    document.getElementById("personalRecepcionNoche").addEventListener("input",()=>actualizarCumplimientoRecepcion("noche"));
+    document.getElementById("personalRecepcionPESCA VIVA").addEventListener("input",()=>actualizarCumplimientoRecepcion("PESCA VIVA"));
+    document.getElementById("personalRecepcionTRADICIONAL").addEventListener("input",()=>actualizarCumplimientoRecepcion("TRADICINAL"));
 }
 
 function cambioEstandarRecepcion(turno){
@@ -5342,7 +5342,7 @@ function cambioEstandarRecepcion(turno){
 }
 
 function actualizarCumplimientoRecepcion(turno){
-    const sufijo=turno==='dia'?'Dia':'Noche';
+    const sufijo=turno==='PESCA VIVA'?'PESCA VIVA':'TRADICIONAL';
     const select=document.getElementById('estandarRecepcion'+sufijo);
     const input=document.getElementById('personalRecepcion'+sufijo);
     const box=document.getElementById('cumplimientoRecepcion'+sufijo);
