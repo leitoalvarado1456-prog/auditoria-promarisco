@@ -7059,11 +7059,99 @@ function calcularMODDescabezado(){
 function renderMODRETRABAJO(){
     const wrap=document.getElementById("contenedorMODArea");
     wrap.innerHTML=`
-      <h2>🔄 CUMPLIMIENTO DE MOD — RETRABAJO</h2>
-      <div class="campo">
+      <h2 style="margin:0 0 12px;font-size:19px;">CUMPLIMIENTO DE MOD</h2>
+      <div class="tabla-wrapper" style="width:100%;overflow-x:auto;">
+        <table id="tablaMODRetrabajo" style="width:100%;table-layout:fixed;border-collapse:collapse;">
+          <colgroup><col style="width:24%;"><col style="width:36%;"><col style="width:20%;"><col style="width:20%;"></colgroup>
+          <thead><tr>
+            <th>SUBPROCESO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th><th>MOD PERSONAL</th>
+          </tr></thead>
+          <tbody id="cuerpoMODRetrabajo"><tr id="filaMODRetrabajo">
+            <td style="padding:8px;vertical-align:middle;">
+              <select id="subprocesoRetrabajo" onchange="cargarPresentacionesRetrabajo()" style="width:100%;min-width:0;box-sizing:border-box;padding:8px 6px;font-size:12px;">
+                <option value="">Seleccione...</option>
+                <option value="REETIQUETEO">REETIQUETEO</option>
+                <option value="REEMPAQUE">REEMPAQUE</option>
+                <option value="REPROCESO">REPROCESO</option>
+              </select>
+            </td>
+            <td style="padding:8px;vertical-align:middle;">
+              <select id="presentacionRetrabajo" onchange="actualizarMODRetrabajo()" style="width:100%;min-width:0;box-sizing:border-box;padding:8px 6px;font-size:12px;"><option value="">Seleccione subproceso primero...</option></select>
+            </td>
+            <td style="padding:8px;text-align:center;vertical-align:middle;">
+              <div class="mod-estandar-auto" id="modEstandarRetrabajo" style="display:block;min-width:0;width:100%;box-sizing:border-box;padding:8px 4px;font-size:13px;">—<small>Seleccione presentación</small></div>
+            </td>
+            <td style="padding:8px;vertical-align:middle;">
+              <input id="personalRetrabajo" type="number" min="0" step="1" placeholder="Personas" style="display:block;width:100%;min-width:0;box-sizing:border-box;padding:9px 6px;font-size:13px;text-align:center;">
+            </td>
+          </tr></tbody>
+        </table>
       </div>`;
 }
 
+const PRESENTACIONES_RETRABAJO = {
+  REETIQUETEO: [
+    {nombre:"IQF — 1x12 kg", mod:23, estandar:"3.000 Kg/h"},
+    {nombre:"IQF — 3x6 kg", mod:21, estandar:"2.700 Kg/h"},
+    {nombre:"IQF — 1x20 kg", mod:9, estandar:"3.500 Kg/h"},
+    {nombre:"IQF — 1x6 kg", mod:25, estandar:"2.400 Kg/h"},
+    {nombre:"BLOQUE — 6x2 kg", mod:24, estandar:"1.600 Kg/h"},
+    {nombre:"BLOQUE — 10x2 kg (formatos 1,4 / 1,7)", mod:24, estandar:"1.600 Kg/h"},
+    {nombre:"BLOQUE — 10x4 lb", mod:24, estandar:"1.600 Kg/h"},
+    {nombre:"BLOQUE — Sin presentación", mod:0, estandar:""},
+    {nombre:"RETRACTILADO — 45x3,98 kg", mod:7, estandar:"4.500 Kg/h"},
+    {nombre:"RETRACTILADO — 6x2 kg China", mod:29, estandar:"1.450 Kg/h"},
+    {nombre:"RETRACTILADO — 6x2 kg España/Portugal", mod:33, estandar:"1.450 Kg/h"},
+    {nombre:"RETRACTILADO — 3x4 kg", mod:28, estandar:"2.100 Kg/h"}
+  ],
+  REEMPAQUE: [
+    {nombre:"IQF — 1x12 kg", mod:25, estandar:"2.450 Kg/h"},
+    {nombre:"IQF — 3x6 kg", mod:25, estandar:"1.950 Kg/h"},
+    {nombre:"IQF — 1x20 kg", mod:22, estandar:"2.500 Kg/h"},
+    {nombre:"IQF — 1x6 kg", mod:29, estandar:"1.900 Kg/h"},
+    {nombre:"BLOQUE — 6x2 kg", mod:28, estandar:"1.350 Kg/h"},
+    {nombre:"BLOQUE — 10x2 kg", mod:28, estandar:"1.350 Kg/h"},
+    {nombre:"RETRACTILADO — 45x3,98 kg", mod:7, estandar:"4.500 Kg/h"},
+    {nombre:"RETRACTILADO — 6x2 kg China", mod:29, estandar:"1.450 Kg/h"},
+    {nombre:"RETRACTILADO — 6x2 kg España/Portugal", mod:33, estandar:"1.450 Kg/h"},
+    {nombre:"RETRACTILADO — 3x4 kg", mod:28, estandar:"2.100 Kg/h"}
+  ],
+  REPROCESO: [
+    {nombre:"Mercadona 1 kg", mod:43, estandar:"999 Kg/h"},
+    {nombre:"Mercadona 0,6 kg", mod:55, estandar:"888 Kg/h"},
+    {nombre:"Bombonera 2 kg — Preparando M/P (solo túnel)", mod:53, estandar:"666 Kg/h"},
+    {nombre:"Bombonera 2 kg — Tumbando M/P", mod:20, estandar:"666 Kg/h"},
+    {nombre:"Portugal 1x9 kg", mod:26, estandar:"888 Kg/h"},
+    {nombre:"Sol y Mar 800 g", mod:33, estandar:"666 Kg/h"}
+  ]
+};
+
+function cargarPresentacionesRetrabajo(){
+    const sub=document.getElementById("subprocesoRetrabajo")?.value||"";
+    const sel=document.getElementById("presentacionRetrabajo");
+    if(!sel)return;
+    sel.innerHTML='<option value="">Seleccione presentación...</option>';
+    (PRESENTACIONES_RETRABAJO[sub]||[]).forEach((item,i)=>{
+      const o=document.createElement("option");
+      o.value=String(i); o.textContent=item.nombre; sel.appendChild(o);
+    });
+    const personal=document.getElementById("personalRetrabajo");
+    if(personal)personal.value="";
+    actualizarMODRetrabajo();
+}
+
+function actualizarMODRetrabajo(){
+    const sub=document.getElementById("subprocesoRetrabajo")?.value||"";
+    const sel=document.getElementById("presentacionRetrabajo");
+    const box=document.getElementById("modEstandarRetrabajo");
+    if(!sel||!box)return;
+    const item=(PRESENTACIONES_RETRABAJO[sub]||[])[Number(sel.value)];
+    if(!sel.value || !item){box.innerHTML='—<small>Seleccione presentación</small>';return;}
+    box.innerHTML=`${item.mod} personas<small>MOD estándar automática</small>`;
+}
+function renderMODRetrabajo(){
+    renderMODRETRABAJO();
+}
 /* =========================================================
    FINALIZAR — estructura por área
 ========================================================= */
@@ -7122,10 +7210,31 @@ finalizar = function(){
         });
     }
     else if(areaActual==="RETRABAJO"){
+        const sub=document.getElementById("subprocesoRetrabajo")?.value||"";
+        const sel=document.getElementById("presentacionRetrabajo");
+        const personal=document.getElementById("personalRetrabajo")?.value?.trim()||"";
+        const item=(PRESENTACIONES_RETRABAJO[sub]||[])[Number(sel?.value)];
+        if(!sub || !item){
+            alert("Seleccione el subproceso y la presentación de Retrabajo.");
+            return;
+        }
+        if(personal===""){
+            alert("Escriba el MOD personal.");
+            return;
+        }
+        const modRetrabajo=[{
+            linea:"RETRABAJO",
+            subproceso:sub,
+            presentacion:item.nombre,
+            estandar:String(item.mod),
+            personal:String(personal),
+            tipo:"MOD",
+            kilos:0,teorico:"",panerasMin:"",kgHora:0,cumplimiento:"N/A"
+        }];
+        auditoria.mod=modRetrabajo;
         auditoria.observacionesRendimiento=
             (document.getElementById("observacionGeneralRetrabajo")?.value||"").trim();
         auditoria.observacionesMOD="";
-        auditoria.mod=[];
         auditoria.preguntas=[];
         for(let i=1;i<=7;i++){
             const r=document.querySelector('input[name="p'+i+'"]:checked');
