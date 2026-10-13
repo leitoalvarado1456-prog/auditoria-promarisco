@@ -987,13 +987,13 @@ td select {
 
         <button
             class="area-btn"
-            onclick="seleccionarArea('REPROCESOS')">
+            onclick="seleccionarArea('RETRABAJO')">
 
             <span class="area-icon">
                 🔄
             </span>
 
-            REPROCESOS
+            RETRABAJO
 
         </button>
 
@@ -2138,7 +2138,7 @@ function seleccionarArea(area) {
     cargarLideres(area);
 
     // Ocultar o mostrar EQUIPO
-    if(area === "RECEPCION" || area === "REPROCESOS") {
+    if(area === "RECEPCION" || area === "RETRABAJO") {
 
         document.getElementById("equipo").parentElement.style.display = "none";
 
@@ -2184,7 +2184,7 @@ const LIDERES_POR_AREA = {
         "PATRICIA ONTANERA"
     ],
 
-    "REPROCESOS": [
+    "RETRABAJO": [
         "AMARILIS CRUZ",
         "VICENTE MACIAS",
         "MONICA PAREDES",
@@ -2353,7 +2353,7 @@ function irRendimiento() {
         !jefe ||
         (
             areaActual !== "RECEPCION" &&
-            areaActual !== "REPROCESOS" &&
+            areaActual !== "RETRABAJO" &&
             !equipo
         )
     ) {
@@ -2374,7 +2374,7 @@ function irRendimiento() {
 
     auditoria.equipo =
         areaActual === "RECEPCION" ||
-        areaActual === "REPROCESOS"
+        areaActual === "RETRABAJO"
             ? "N/A"
             : equipo;
 
