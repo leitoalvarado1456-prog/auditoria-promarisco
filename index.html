@@ -5306,7 +5306,7 @@ function crearTablaRecepcionMOD(){
             </tr></thead>
             <tbody>
                 <tr>
-                    <td><strong>DIA</strong></td>
+                    <td><strong>PESCA VIVA</strong></td>
                     <td>
                         <select id="estandarRecepcionPESCA VIVA" onchange="cambioEstandarRecepcion('PESCA VIVA')">
                             <option value="">Seleccione...</option>
@@ -5318,7 +5318,7 @@ function crearTablaRecepcionMOD(){
                     <td><div id="cumplimientoRecepcionPESCA VIVA" class="cumplimiento-auto pendiente-auto">Pendiente</div></td>
                 </tr>
                 <tr>
-                    <td><strong>NOCHE</strong></td>
+                    <td><strong>TRADICIONAL</strong></td>
                     <td>
                         <select id="estandarRecepcionTRADICIONAL" onchange="cambioEstandarRecepcion('TRADICIONAL')">
                             <option value="">Seleccione...</option>
@@ -5934,7 +5934,7 @@ const ESTANDARES_CLASIF = [
 /* =========================================================
    RENDIMIENTO POR ÁREA
    RECEPCIÓN: solo observación general.
-   CONGELACIÓN / CLASIFICADORA / REPROCESOS / DESCABEZADO:
+   CONGELACIÓN / CLASIFICADORA / RETRABAJO / DESCABEZADO:
    mantienen las 7 preguntas del liquidador de MP.
 ========================================================= */
 
@@ -5953,8 +5953,8 @@ const ESTANDARES_CLASIF = [
    DESCABEZADO:
    - Evaluación propia de descabezado.
 
-   REPROCESOS:
-   - Evaluación propia de reprocesos.
+   RETRABAJO:
+   - Evaluación propia de RETRABAJO.
 
    Cada área está separada para poder modificar sus
    preguntas independientemente.
@@ -6635,17 +6635,17 @@ if(areaActual === 'RECEPCION'){
 
 
     /* =====================================================
-       REPROCESOS
+       RETRABAJO
     ===================================================== */
 
-    if(areaActual === 'REPROCESOS'){
+    if(areaActual === 'RETRABAJO'){
 
         titulo.textContent = 'RENDIMIENTO';
-        subtitulo.textContent = 'Evaluación del proceso de reprocesos.';
+        subtitulo.textContent = 'Evaluación del proceso de retrabajo.';
 
         card.innerHTML = `
 
-            <h2>Evaluación - Reprocesos</h2>
+            <h2>Evaluación - Retrabajo</h2>
 
             <div class="pregunta">
                 <div class="pregunta-texto">
@@ -6670,7 +6670,7 @@ if(areaActual === 'RECEPCION'){
 
             <div class="pregunta">
                 <div class="pregunta-texto">
-                    2.- ¿El anotador registra correctamente la hora real de inicio del reproceso?
+                    2.- ¿El anotador registra correctamente la hora real de inicio del retrabajo?
                 </div>
 
                 <div class="opciones">
@@ -6691,7 +6691,7 @@ if(areaActual === 'RECEPCION'){
 
             <div class="pregunta">
                 <div class="pregunta-texto">
-                    3.- ¿Se registra correctamente la presentación y producto que ingresa a reproceso?
+                    3.- ¿Se registra correctamente la presentación y producto que ingresa a retrabajo?
                 </div>
 
                 <div class="opciones">
@@ -6754,7 +6754,7 @@ if(areaActual === 'RECEPCION'){
 
             <div class="pregunta">
                 <div class="pregunta-texto">
-                    6.- ¿Coinciden los datos tomados por el auditor con los registros del reproceso?
+                    6.- ¿Coinciden los datos tomados por el auditor con los registros del retrabajo?
                 </div>
 
                 <div class="opciones">
@@ -6855,7 +6855,7 @@ function irRendimiento(){
     const jefe=document.getElementById('jefe').value;
 
     if(!dia || !turno || !supervisor || !lider || !jefe ||
-       (areaActual!=='RECEPCION' && areaActual!=='REPROCESOS' && !equipo)){
+       (areaActual!=='RECEPCION' && areaActual!=='RETRABAJO' && !equipo)){
         alert('Complete todos los campos antes de continuar.');
         return;
     }
@@ -6863,7 +6863,7 @@ function irRendimiento(){
     auditoria.area=areaActual;
     auditoria.dia=dia;
     auditoria.turno=turno;
-    auditoria.equipo=(areaActual==='RECEPCION'||areaActual==='REPROCESOS')?'N/A':equipo;
+    auditoria.equipo=(areaActual==='RECEPCION'||areaActual==='RETRABAJO')?'N/A':equipo;
     auditoria.supervisor=supervisor;
     auditoria.lider=lider;
     auditoria.jefe=jefe;
@@ -6875,7 +6875,7 @@ function irRendimiento(){
 /* =========================================================
    IR A MOD
    Solo RECEPCIÓN no tiene formulario de 7 preguntas.
-   REPROCESOS sí tiene las 7 preguntas.
+   RETRABAJO sí tiene las 7 preguntas.
 ========================================================= */
 function irMOD(){
     if(areaActual==='RECEPCION'){
@@ -6899,7 +6899,7 @@ function irMOD(){
     else if(areaActual==='CLASIFICADORA') renderMODClasificadora();
     else if(areaActual==='RECEPCION') renderMODRecepcion();
     else if(areaActual==='DESCABEZADO') renderMODDescabezado();
-    else if(areaActual==='REPROCESOS') renderMODReprocesos();
+    else if(areaActual==='RETRABAJO') renderMODRetrabajo();
     else renderMODRecepcion();
 
     mostrarPantalla('pantallaMOD');
@@ -7063,14 +7063,14 @@ function calcularMODDescabezado(){
 }
 
 /* =========================================================
-   REPROCESOS
+   RETRABAJO
    No tiene formulario MOD: solo observación general.
    No aparece "Debe agregar al menos una presentación".
 ========================================================= */
-function renderMODReprocesos(){
+function renderMODRETRABAJO(){
     const wrap=document.getElementById("contenedorMODArea");
     wrap.innerHTML=`
-      <h2>🔄 CUMPLIMIENTO DE MOD — REPROCESOS</h2>
+      <h2>🔄 CUMPLIMIENTO DE MOD — RETRABAJO</h2>
       <div class="campo">
       </div>`;
 }
@@ -7132,9 +7132,9 @@ finalizar = function(){
             cumplimiento:Number(personal)>=item.valor?"Cumple":"No Cumple"
         });
     }
-    else if(areaActual==="REPROCESOS"){
+    else if(areaActual==="RETRABAJO"){
         auditoria.observacionesRendimiento=
-            (document.getElementById("observacionGeneralReprocesos")?.value||"").trim();
+            (document.getElementById("observacionGeneralRetrabajo")?.value||"").trim();
         auditoria.observacionesMOD="";
         auditoria.mod=[];
         auditoria.preguntas=[];
@@ -7217,7 +7217,7 @@ finalizar = function(){
     auditoria.observacionesMOD=
         (document.getElementById("observacionesMOD")?.value||"").trim();
 
-    if(areaActual!=="RECEPCION" && areaActual!=="REPROCESOS"){
+    if(areaActual!=="RECEPCION" && areaActual!=="RETRABAJO"){
         auditoria.preguntas=[];
         for(let i=1;i<=7;i++){
             const r=document.querySelector('input[name="p'+i+'"]:checked');
