@@ -4125,7 +4125,7 @@ function exportarExcel() {
 
             "MOD Personal",
 
-            "Paneras / min",
+            "Unidades / min",
 
             "Kg/h Teórico",
 
@@ -5469,14 +5469,18 @@ function renderMODCongelacion(){
 function agregarPresentacionFrio(){
     const tbody=document.getElementById("cuerpoMOD");
     if(!tbody || tbody.children.length>0)return;
+    const equipo=auditoria.equipo||"";
     const id=1;
     const fila=document.createElement("tr");
     fila.id="filaMOD_1";
     const equipos=["LC1","LC2","LC3","LC4","FRIGOESCANDIA","FRIGO-TUNEL"];
     fila.innerHTML=`
-      <td><select class="lineaCongelacion" onchange="cargarPresentacionesFilaFrio(${id})">
-        <option value="">Seleccione...</option>${equipos.map(x=>`<option value="${x}">${x}</option>`).join("")}
-      </select></td>
+      <td>
+        <div class="mod-estandar-auto" id="equipoFrioFijo_${id}">${equipo || "Seleccione equipo en Datos"}</div>
+        <select class="lineaCongelacion" onchange="cargarPresentacionesFilaFrio(${id})" style="display:none" aria-hidden="true" tabindex="-1">
+          <option value="">Seleccione...</option>${equipos.map(x=>`<option value="${x}">${x}</option>`).join("")}
+        </select>
+      </td>
       <td><select class="presentacion" onchange="calcularKgHoraFrio(${id})"><option value="">Seleccione equipo primero...</option></select></td>
       <td><div class="mod-estandar-auto" id="modEstandar_${id}">—<small>Seleccione presentación</small></div></td>
       <td><input class="personal" type="number" min="0" step="1" placeholder="Personas"></td>
@@ -5486,9 +5490,14 @@ function agregarPresentacionFrio(){
       <td><div class="cumplimiento-auto pendiente-auto" id="cumplimiento_${id}">Pendiente</div></td>`;
     tbody.appendChild(fila);
     const sel=fila.querySelector(".lineaCongelacion");
+    const equipoFijo=document.getElementById(`equipoFrioFijo_${id}`);
     if(equipos.includes(equipo)){
         sel.value=equipo;
+        if(equipoFijo) equipoFijo.textContent=equipo;
         cargarPresentacionesFilaFrio(id);
+    } else {
+        sel.value="";
+        if(equipoFijo) equipoFijo.textContent="Seleccione equipo en Datos";
     }
 }
 
@@ -5559,13 +5568,11 @@ function renderMODClasificadora(){
       <h2>⚙️ CUMPLIMIENTO DE MOD — CLASIFICADORA</h2>
       <div class="tabla-wrapper"><table id="tablaMODClasif"><thead><tr>
         <th>CLASIFICADORA</th><th>TIPO DE PROCESO</th><th>TIPO DE ENVASE</th><th>PESO</th>
-        <th>MOD ESTÁNDAR AUTOMÁTICA</th><th>MOD PERSONAL</th><th>PANERAS/MIN</th><th>Kg/h TEÓRICO</th><th>Kg/h CALCULADO</th><th>CUMPLIMIENTO</th>
+        <th>MOD PERSONAL AUTOMÁTICA</th><th>KG TEÓRICO (ESTÁNDAR)</th><th>UNIDADES/MIN</th><th>KG/H CALCULADO (UNIDAD × PESO × 60 MIN)</th><th>CUMPLIMIENTO</th>
       </tr></thead><tbody><tr>
         <td>
-          <select id="clasifSel" onchange="actualizarMODPersonalClasif(); actualizarPesosClasif(); cargarEstandarClasif()">
-            <option value="">Seleccione...</option>
-            ${Array.from({length:9},(_,i)=>`<option value="${i+1}">Clasificadora ${i+1}</option>`).join("")}
-          </select>
+          <div class="mod-estandar-auto" id="clasifFija">${auditoria.equipo || "Seleccione equipo en Datos"}</div>
+          <input type="hidden" id="clasifSel" value="${/^Clasificadora [1-9]$/.test(auditoria.equipo||"") ? auditoria.equipo.replace("Clasificadora ","") : ""}">
         </td>
         <td>
           <select id="tipoProcesoClasif" onchange="actualizarPesosClasif(); cargarEstandarClasif()">
@@ -5587,15 +5594,11 @@ function renderMODClasificadora(){
             <option value="">Seleccione peso...</option>
           </select>
         </td>
-        <td><div class="mod-estandar-auto" id="modClasifAuto">—<small>Seleccione datos</small></div></td>
+        <td><div class="mod-estandar-auto" id="modClasifAuto">—<small>Seleccione equipo en Datos</small></div><input id="personalClasif" type="hidden" value=""></td>
+        <td><div class="calculo-kgh" id="teoricoClasif">—<small>Seleccione proceso, envase y peso</small></div></td>
         <td>
-          <input id="personalClasif" type="number" min="0" step="1" placeholder="Automático" readonly
-                 style="background:#f1f1f1;cursor:not-allowed;">
+          <input id="panerasClasif" type="number" min="0" step="0.01" placeholder="Unidades/min" oninput="calcularClasif()">
         </td>
-        <td>
-          <input id="panerasClasif" type="number" min="0" step="0.01" placeholder="Paneras/min" oninput="calcularClasif()">
-        </td>
-        <td><div class="calculo-kgh" id="teoricoClasif">—<small>Seleccione datos</small></div></td>
         <td><div class="calculo-kgh" id="kghClasif">0.00 Kg/h</div></td>
         <td><div class="cumplimiento-auto pendiente-auto" id="cumplimientoClasif">Pendiente</div></td>
       </tr></tbody></table></div>`;
@@ -5632,6 +5635,8 @@ function actualizarMODPersonalClasif(){
     if(!input)return;
 
     input.value=personalPorClasif[c] ?? "";
+    const display=document.getElementById("modClasifAuto");
+    if(display) display.innerHTML=input.value ? `${input.value} personas<small>MOD Personal automática</small>` : `—<small>Seleccione equipo en Datos</small>`;
 }
 
 /* =========================================================
@@ -5688,8 +5693,8 @@ function cargarEstandarClasif(){
     if(!box)return;
 
     if(!c||!Number.isFinite(w)){
-        box.innerHTML='—<small>Seleccione clasificadora y peso</small>';
-        if(teorico)teorico.innerHTML='—<small>Seleccione datos</small>';
+        if(box) actualizarMODPersonalClasif();
+        if(teorico)teorico.innerHTML='—<small>Seleccione proceso, envase y peso</small>';
         calcularClasif();
         return;
     }
@@ -5699,18 +5704,18 @@ function cargarEstandarClasif(){
     );
 
     if(!item || !item.v[c-1]){
-        box.innerHTML='No registrado<small>Estándar no encontrado</small>';
-        if(teorico)teorico.innerHTML='—<small>Sin estándar</small>';
+        if(box) actualizarMODPersonalClasif();
+        if(teorico)teorico.innerHTML='No registrado<small>Estándar no encontrado</small>';
         calcularClasif();
         return;
     }
 
     const val=Number(item.v[c-1]);
 
-    box.innerHTML=`${formatearNumero(val)} kg/h<small>Estándar automática</small>`;
+    actualizarMODPersonalClasif();
 
     if(teorico){
-        teorico.innerHTML=`${formatearNumero(val)} Kg/h<small>Valor estándar</small>`;
+        teorico.innerHTML=`${formatearNumero(val)} Kg/h<small>Kg teórico estándar</small>`;
     }
 
     calcularClasif();
@@ -5734,19 +5739,19 @@ function calcularClasif(){
 
     const out=document.getElementById("kghClasif");
     const cu=document.getElementById("cumplimientoClasif");
+    const teoricoBox=document.getElementById("teoricoClasif");
 
     if(!out||!cu)return;
 
-    if(!est||!pan||!w){
-        out.innerHTML=`0.00 Kg/h<small>Ingrese paneras/min</small>`;
+    if(!pan||!w){
+        out.innerHTML=`0.00 Kg/h<small>Ingrese unidades/min</small>`;
         cu.textContent='Pendiente';
         cu.className='cumplimiento-auto pendiente-auto';
         return;
     }
 
-    const kg=pan*4*60*w;
-
-    out.innerHTML=`${formatearNumero(kg)} Kg/h<small>${pan} Paneras × 4 Carriles × 60 × ${w} Kg</small>`;
+    const kg=pan*w*60;
+    out.innerHTML=`${formatearNumero(kg)} Kg/h<small>Unidades/min × peso × 60 min</small>`;
 
     if(kg>=est){
         cu.textContent='✓ CUMPLE';
@@ -5818,9 +5823,9 @@ function finalizar(){
         const pan=document.getElementById("panerasClasif")?.value||"";
         const item=ESTANDARES_CLASIF.find(x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011);
         const est=item&&c?Number(item.v[Number(c)-1]):null;
-        if(!c||!item||!est||!personal||!pan){alert("Complete clasificadora, proceso, envase, peso, personal y paneras/min.");return;}
+        if(!c||!item||!est||!personal||!pan){alert("Seleccione el equipo en Datos y complete proceso, envase, peso y unidades/min.");return;}
         const kg=Number(pan)*4*60*w;
-        mod.push({linea:"Clasificadora "+c,presentacion:p+" / "+e+" / "+String(w).replace(".",","),kilos:w,tipo:"CARRILES",estandar:String(est),teorico:String(est),personal:String(personal),panerasMin:String(pan),kgHora:kg,cumplimiento:kg>=est?"Cumple":"No Cumple"});
+        mod.push({linea:"Clasificadora "+c,presentacion:p+" / "+e+" / "+String(w).replace(".",","),kilos:w,tipo:"CARRILES",estandar:String(est),teorico:String(kg),personal:String(personal),panerasMin:String(pan),kgHora:kg,cumplimiento:kg>=est?"Cumple":"No Cumple"});
     }
     else if(areaActual==="CONGELACION"){
         const filas=document.querySelectorAll("#cuerpoMOD tr");
@@ -5970,22 +5975,9 @@ function configurarRendimientoPorArea(){
 if(areaActual === 'RECEPCION'){
 
         titulo.textContent = 'RENDIMIENTO';
-        subtitulo.textContent = 'Observación general de recepción.';
+        subtitulo.textContent = '';
 
         card.innerHTML = `
-
-            <h2>Observación general</h2>
-
-            <div class="campo">
-
-                <label>OBSERVACIÓN GENERAL</label>
-
-                <textarea
-                    id="observacionesRendimiento"
-                    placeholder="Ingrese la observación general..."
-                ></textarea>
-
-            </div>
 
             <div class="acciones">
 
@@ -6946,7 +6938,7 @@ function renderMODRecepcion(){
             </td>
             <td>
               <input id="personalMODRecepcion" type="number" min="0" step="1"
-                     placeholder="Personal faltante" oninput="calcularMODRecepcion()">
+                     placeholder="Personal de sitio" oninput="calcularMODRecepcion()">
             </td>
             <td>
               <div id="cumplimientoMODRecepcion"
@@ -7024,7 +7016,7 @@ function renderMODDescabezado(){
             </td>
             <td>
               <input id="personalMODDescabezado" type="number" min="0" step="1"
-                     placeholder="Personal faltante" oninput="calcularMODDescabezado()">
+                     placeholder="Personal de sitio" oninput="calcularMODDescabezado()">
             </td>
             <td>
               <div id="cumplimientoMODDescabezado"
@@ -7169,10 +7161,10 @@ finalizar = function(){
         const item=ESTANDARES_CLASIF.find(x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011);
         const est=item&&c?Number(item.v[Number(c)-1]):null;
         if(!c||!item||!est||!personal||!pan){
-            alert("Complete clasificadora, proceso, envase, peso, personal y paneras/min.");
+            alert("Complete proceso, envase, peso y unidades/min; el equipo y el MOD personal se cargan automáticamente desde Datos.");
             return;
         }
-        const kg=Number(pan)*4*60*w;
+        const kg=Number(pan)*w*60;
         mod.push({
             linea:"Clasificadora "+c,
             presentacion:p+" / "+e+" / "+String(w).replace(".",","),
