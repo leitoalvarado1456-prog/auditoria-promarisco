@@ -6916,8 +6916,8 @@ function renderMODRecepcion(){
             <td>
               <select id="turnoMODRecepcion" onchange="cargarEstandarRecepcion()">
                 <option value="">Seleccione...</option>
-                <option value="DIA">DIA</option>
-                <option value="NOCHE">NOCHE</option>
+                <option value="PESCA VIVA">PESCA VIVA</option>
+                <option value="TRADICIONAL">TRADICIONAL</option>
               </select>
             </td>
             <td>
@@ -6943,9 +6943,9 @@ function cargarEstandarRecepcion(){
     const turno=document.getElementById("turnoMODRecepcion")?.value;
     const box=document.getElementById("estandarMODRecepcion");
     if(!box)return;
-    if(turno==="DIA"){
+    if(turno==="PESCA VIVA"){
         box.innerHTML=`31 personas<small>PESCA VIVA</small>`;
-    }else if(turno==="NOCHE"){
+    }else if(turno==="TRADICIONAL"){
         box.innerHTML=`38 personas<small>RECEPCIÓN DE BINES</small>`;
     }else{
         box.innerHTML=`—<small>Seleccione turno</small>`;
@@ -6958,7 +6958,7 @@ function calcularMODRecepcion(){
     const personal=Number(document.getElementById("personalMODRecepcion")?.value||0);
     const box=document.getElementById("cumplimientoMODRecepcion");
     if(!box)return;
-    const estandar=turno==="DIA"?31:turno==="NOCHE"?38:0;
+    const estandar=turno==="PESCA VIVA"?31:turno==="TRADICIONAL"?38:0;
     if(!estandar || !personal){
         box.textContent="Pendiente";
         box.className="cumplimiento-auto pendiente-auto";
