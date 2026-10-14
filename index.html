@@ -673,6 +673,7 @@ td select {
     border: 1px solid #f3b27e;
 }
 .faltantes-auto {display:inline-block;min-width:75px;padding:9px 10px;border-radius:8px;background:#fff2c9;color:#856404;border:1px solid #ead58b;text-align:center;font-weight:bold;}
+.cumplimiento-auto {overflow-wrap:anywhere;}
 
 /* =========================================================
    RESUMEN
@@ -5426,18 +5427,16 @@ function actualizarCumplimientoDescabezado(n){
     const select=document.getElementById('estandarDescabezado'+n);
     const input=document.getElementById('personalDescabezado'+n);
     const box=document.getElementById('cumplimientoDescabezado'+n);
-    const faltantes=document.getElementById('faltantesDescabezado'+n);
     if(!select||!input||!box)return;
     const option=select.options[select.selectedIndex];
     const estandar=Number(option?.dataset?.estandar||0);
     const personal=Number(input.value||0);
-    if(faltantes)faltantes.textContent=(!select.value||input.value.trim()==="")?"—":`${Math.max(0,estandar-personal)} personas`;
     if(!select.value||!personal||!estandar){
         box.textContent='Pendiente'; box.className='cumplimiento-auto pendiente-auto';
     }else if(personal>=estandar){
         box.textContent='✓ CUMPLE'; box.className='cumplimiento-auto cumple-auto';
     }else{
-        box.textContent='✕ NO CUMPLE'; box.className='cumplimiento-auto no-cumple-auto';
+        box.textContent=`⚠ PERSONAS FALTANTES (${estandar-personal})`; box.className='cumplimiento-auto no-cumple-auto';
     }
 }
 
@@ -5454,7 +5453,7 @@ function actualizarCumplimientoSimple(inputId,resultadoId,estandar){
         box.textContent="✓ CUMPLE";
         box.className="cumplimiento-auto cumple-auto";
     }else{
-        box.textContent="✕ NO CUMPLE";
+        box.textContent=`⚠ PERSONAS FALTANTES (${estandar-personal})`;
         box.className="cumplimiento-auto no-cumple-auto";
     }
 }
@@ -5480,7 +5479,7 @@ function renderMODCongelacion(){
       <div class="tabla-wrapper">
       <table id="tablaMOD"><thead><tr>
         <th>LÍNEA / EQUIPO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th>
-        <th>MOD PERSONA</th><th>PERSONAS FALTANTES</th><th>CUMPLIMIENTO MOD</th>
+        <th>MOD PERSONA</th><th>CUMPLIMIENTO MOD</th>
         <th>PANERAS / MIN</th><th>Kg/h TEÓRICO</th><th>Kg/h CALCULADO</th><th>CUMPLIMIENTO</th>
       </tr></thead><tbody id="cuerpoMOD"></tbody></table></div>`;
     agregarPresentacionFrio();
@@ -5503,8 +5502,7 @@ function agregarPresentacionFrio(){
       </td>
       <td><select class="presentacion" onchange="calcularKgHoraFrio(${id}); calcularCumplimientoPersonalFrio(${id})"><option value="">Seleccione equipo primero...</option></select></td>
       <td><div class="mod-estandar-auto" id="modEstandar_${id}">—<small>Seleccione presentación</small></div></td>
-      <td><input class="personalSitioFrio" type="number" min="0" step="1" placeholder="Personal en sitio" oninput="calcularCumplimientoPersonalFrio(${id}); calcularFaltantesFrio(${id})"></td>
-      <td><div class="faltantes-auto" id="faltantesFrio_${id}">—</div></td>
+      <td><input class="personalSitioFrio" type="number" min="0" step="1" placeholder="Personal en sitio" oninput="calcularCumplimientoPersonalFrio(${id})"></td>
       <td><div class="cumplimiento-auto pendiente-auto" id="cumplimientoPersonalFrio_${id}">Pendiente</div></td>
       <td><input class="bases" type="number" min="0" step="0.01" placeholder="Paneras/min" oninput="calcularKgHoraFrio(${id})"></td>
       <td><div class="calculo-kgh" id="teorico_${id}">—<small>Seleccione presentación</small></div></td>
@@ -5526,9 +5524,8 @@ function agregarPresentacionFrio(){
 function calcularFaltantesFrio(id){
     const fila=document.getElementById("filaMOD_"+id); if(!fila)return;
     const sel=fila.querySelector(".presentacion"); const opt=sel?.options[sel.selectedIndex];
-    const input=fila.querySelector(".personalSitioFrio"); const box=document.getElementById("faltantesFrio_"+id);
-    if(!box||!input)return; const estandar=Number(opt?.dataset?.mod||0);
-    box.textContent=(!opt?.value||!estandar||input.value.trim()==="")?"—":`${Math.max(0,estandar-Number(input.value))} personas`;
+    const input=fila.querySelector(".personalSitioFrio");
+    if(!input)return;
 }
 function calcularCumplimientoPersonalFrio(id){
     const fila=document.getElementById("filaMOD_"+id); if(!fila)return;
@@ -5538,7 +5535,6 @@ function calcularCumplimientoPersonalFrio(id){
     const input=fila.querySelector(".personalSitioFrio");
     const box=document.getElementById("cumplimientoPersonalFrio_"+id);
     if(!box||!input)return;
-    calcularFaltantesFrio(id);
     const valor=input.value.trim(); const personal=Number(valor);
     if(!opt||!opt.value||!estandar||valor===""){
         box.textContent="Pendiente"; box.className="cumplimiento-auto pendiente-auto";
@@ -5547,7 +5543,7 @@ function calcularCumplimientoPersonalFrio(id){
     }else if(personal===estandar){
         box.textContent="✓ CUMPLE"; box.className="cumplimiento-auto cumple-auto";
     }else{
-        box.textContent="✕ NO CUMPLE"; box.className="cumplimiento-auto no-cumple-auto";
+        box.textContent=`⚠ PERSONAS FALTANTES (${estandar-personal})`; box.className="cumplimiento-auto no-cumple-auto";
     }
 }
 
@@ -5573,7 +5569,6 @@ function cargarPresentacionesFilaFrio(id){
     });
     calcularKgHoraFrio(id);
     calcularCumplimientoPersonalFrio(id);
-    calcularFaltantesFrio(id);
 }
 
 function calcularKgHoraFrio(id){
@@ -5620,7 +5615,7 @@ function renderMODClasificadora(){
       <h2>⚙️ CUMPLIMIENTO DE MOD — CLASIFICADORA</h2>
       <div class="tabla-wrapper"><table id="tablaMODClasif"><thead><tr>
         <th>CLASIFICADORA</th><th>TIPO DE PROCESO</th><th>TIPO DE ENVASE</th><th>PESO</th>
-        <th>MOD PERSONAL AUTOMÁTICA</th><th>MOD PERSONA (PERSONAL EN EL SITIO)</th><th>PERSONAS FALTANTES</th><th>CUMPLIMIENTO MOD</th><th>KG TEÓRICO (ESTÁNDAR)</th><th>UNIDADES/MIN</th><th>KG/H CALCULADO (UNIDAD × PESO × 60 MIN)</th><th>CUMPLIMIENTO</th>
+        <th>MOD PERSONAL AUTOMÁTICA</th><th>MOD PERSONA (PERSONAL EN EL SITIO)</th><th>CUMPLIMIENTO MOD</th><th>KG TEÓRICO (ESTÁNDAR)</th><th>UNIDADES/MIN</th><th>KG/H CALCULADO (UNIDAD × PESO × 60 MIN)</th><th>CUMPLIMIENTO</th>
       </tr></thead><tbody><tr>
         <td>
           <div class="mod-estandar-auto" id="clasifFija">${auditoria.equipo || "Seleccione equipo en Datos"}</div>
@@ -5648,7 +5643,6 @@ function renderMODClasificadora(){
         </td>
         <td><div class="mod-estandar-auto" id="modClasifAuto">—<small>Seleccione equipo en Datos</small></div><input id="personalClasif" type="hidden" value=""></td>
         <td><input id="personalSitioClasif" type="number" min="0" step="1" placeholder="Personal en sitio" oninput="calcularCumplimientoPersonalClasif()"></td>
-        <td><div class="faltantes-auto" id="faltantesClasif">—</div></td>
         <td><div class="cumplimiento-auto pendiente-auto" id="cumplimientoPersonalClasif">Pendiente</div></td>
         <td><div class="calculo-kgh" id="teoricoClasif">—<small>Seleccione proceso, envase y peso</small></div></td>
         <td>
@@ -5699,10 +5693,8 @@ function calcularCumplimientoPersonalClasif(){
     const estandar=Number(document.getElementById("personalClasif")?.value||0);
     const input=document.getElementById("personalSitioClasif");
     const box=document.getElementById("cumplimientoPersonalClasif");
-    const faltantes=document.getElementById("faltantesClasif");
     if(!input||!box)return;
     const valor=input.value.trim(); const personal=Number(valor);
-    if(faltantes)faltantes.textContent=(!estandar||valor==="")?"—":`${Math.max(0,estandar-personal)} personas`;
     if(!estandar||valor===""){
         box.textContent="Pendiente"; box.className="cumplimiento-auto pendiente-auto";
     }else if(personal>estandar){
@@ -5710,7 +5702,7 @@ function calcularCumplimientoPersonalClasif(){
     }else if(personal===estandar){
         box.textContent="✓ CUMPLE"; box.className="cumplimiento-auto cumple-auto";
     }else{
-        box.textContent="✕ NO CUMPLE"; box.className="cumplimiento-auto no-cumple-auto";
+        box.textContent=`⚠ PERSONAS FALTANTES (${estandar-personal})`; box.className="cumplimiento-auto no-cumple-auto";
     }
 }
 
@@ -7006,7 +6998,6 @@ function renderMODRecepcion(){
           <th>TURNO</th>
           <th>ESTÁNDAR</th>
           <th>PERSONAL</th>
-          <th>PERSONAS FALTANTES</th>
           <th>CUMPLIMIENTO</th>
         </tr></thead>
         <tbody>
@@ -7027,7 +7018,6 @@ function renderMODRecepcion(){
               <input id="personalMODRecepcion" type="number" min="0" step="1"
                      placeholder="Personal de sitio" oninput="calcularMODRecepcion()">
             </td>
-            <td><div id="faltantesMODRecepcion" class="faltantes-auto">—</div></td>
             <td>
               <div id="cumplimientoMODRecepcion"
                    class="cumplimiento-auto pendiente-auto">Pendiente</div>
@@ -7056,11 +7046,9 @@ function calcularMODRecepcion(){
     const turno=document.getElementById("turnoMODRecepcion")?.value;
     const personal=Number(document.getElementById("personalMODRecepcion")?.value||0);
     const box=document.getElementById("cumplimientoMODRecepcion");
-    const faltantesBox=document.getElementById("faltantesMODRecepcion");
     if(!box)return;
     const estandar=turno==="PESCA VIVA"?31:turno==="TRADICIONAL"?38:0;
     const input=document.getElementById("personalMODRecepcion");
-    if(faltantesBox){faltantesBox.textContent=(!estandar||!input||input.value.trim()==="")?"—":`${Math.max(0,estandar-personal)} personas`;}
     if(!estandar || !input || input.value.trim()===""){
         box.textContent="Pendiente";
         box.className="cumplimiento-auto pendiente-auto";
@@ -7071,7 +7059,7 @@ function calcularMODRecepcion(){
         box.textContent="✓ CUMPLE";
         box.className="cumplimiento-auto cumple-auto";
     }else{
-        box.textContent="✕ NO CUMPLE";
+        box.textContent=`⚠ PERSONAS FALTANTES (${estandar-personal})`;
         box.className="cumplimiento-auto no-cumple-auto";
     }
 }
@@ -7091,7 +7079,6 @@ function renderMODDescabezado(){
           <th>TURNO</th>
           <th>ESTÁNDAR</th>
           <th>PERSONAL</th>
-          <th>PERSONAS FALTANTES</th>
           <th>CUMPLIMIENTO</th>
         </tr></thead>
         <tbody>
@@ -7113,7 +7100,6 @@ function renderMODDescabezado(){
               <input id="personalMODDescabezado" type="number" min="0" step="1"
                      placeholder="Personal de sitio" oninput="calcularMODDescabezado()">
             </td>
-            <td><div id="faltantesMODDescabezado" class="faltantes-auto">—</div></td>
             <td>
               <div id="cumplimientoMODDescabezado"
                    class="cumplimiento-auto pendiente-auto">Pendiente</div>
@@ -7144,11 +7130,9 @@ function calcularMODDescabezado(){
     const cfg=document.getElementById("turnoMODDescabezado")?.value;
     const personal=Number(document.getElementById("personalMODDescabezado")?.value||0);
     const box=document.getElementById("cumplimientoMODDescabezado");
-    const faltantesBox=document.getElementById("faltantesMODDescabezado");
     if(!box)return;
     const estandar=cfg==="DIA_MODULO_1"?65:cfg==="DIA_MODULO_2"?65:cfg==="DIA_AMBOS"?130:0;
     const input=document.getElementById("personalMODDescabezado");
-    if(faltantesBox)faltantesBox.textContent=(!estandar||!input||input.value.trim()==="")?"—":`${Math.max(0,estandar-personal)} personas`;
     if(!estandar || !input || input.value===""){
         box.textContent="Pendiente";
         box.className="cumplimiento-auto pendiente-auto";
@@ -7159,7 +7143,7 @@ function calcularMODDescabezado(){
         box.textContent="✓ CUMPLE";
         box.className="cumplimiento-auto cumple-auto";
     }else{
-        box.textContent="✕ NO CUMPLE";
+        box.textContent=`⚠ PERSONAS FALTANTES (${estandar-personal})`;
         box.className="cumplimiento-auto no-cumple-auto";
     }
 }
@@ -7175,9 +7159,9 @@ function renderMODRETRABAJO(){
       <h2 style="margin:0 0 12px;font-size:19px;">CUMPLIMIENTO DE MOD</h2>
       <div class="tabla-wrapper" style="width:100%;overflow-x:auto;">
         <table id="tablaMODRetrabajo" style="width:100%;table-layout:fixed;border-collapse:collapse;">
-          <colgroup><col style="width:17%;"><col style="width:25%;"><col style="width:14%;"><col style="width:16%;"><col style="width:14%;"><col style="width:14%;"></colgroup>
+          <colgroup><col style="width:20%;"><col style="width:29%;"><col style="width:16%;"><col style="width:18%;"><col style="width:17%;"></colgroup>
           <thead><tr>
-            <th>SUBPROCESO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th><th>MOD PERSONA (PERSONAL EN EL SITIO)</th><th>PERSONAS FALTANTES</th><th>CUMPLIMIENTO</th>
+            <th>SUBPROCESO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th><th>MOD PERSONA (PERSONAL EN EL SITIO)</th><th>CUMPLIMIENTO</th>
           </tr></thead>
           <tbody id="cuerpoMODRetrabajo"><tr id="filaMODRetrabajo">
             <td style="padding:8px;vertical-align:middle;">
@@ -7196,9 +7180,6 @@ function renderMODRETRABAJO(){
             </td>
             <td style="padding:8px;vertical-align:middle;">
               <input id="personalRetrabajo" type="number" min="0" step="1" placeholder="Personas" oninput="actualizarMODRetrabajo()" style="display:block;width:100%;min-width:0;box-sizing:border-box;padding:9px 6px;font-size:13px;text-align:center;">
-            </td>
-            <td style="padding:8px;text-align:center;vertical-align:middle;">
-              <div id="faltantesRetrabajo" class="faltantes-auto" style="min-width:0;width:100%;box-sizing:border-box;padding:8px 4px;font-size:12px;">—</div>
             </td>
             <td style="padding:8px;text-align:center;vertical-align:middle;">
               <div id="cumplimientoRetrabajo" class="cumplimiento-auto pendiente-auto" style="min-width:0;width:100%;box-sizing:border-box;padding:8px 4px;font-size:12px;">Pendiente</div>
@@ -7266,22 +7247,19 @@ function actualizarMODRetrabajo(){
     if(!sel||!box)return;
     const item=(PRESENTACIONES_RETRABAJO[sub]||[])[Number(sel.value)];
     const cumplimiento=document.getElementById("cumplimientoRetrabajo");
-    const faltantes=document.getElementById("faltantesRetrabajo");
     const input=document.getElementById("personalRetrabajo");
     if(!sel.value || !item){
         box.innerHTML='—<small>Seleccione presentación</small>';
         if(cumplimiento){cumplimiento.textContent="Pendiente";cumplimiento.className="cumplimiento-auto pendiente-auto";}
-        if(faltantes)faltantes.textContent="—";
         return;
     }
     box.innerHTML=`${item.mod} personas<small>MOD estándar automática</small>`;
     if(!cumplimiento||!input)return;
     const valor=input.value.trim(); const personal=Number(valor); const estandar=Number(item.mod);
-    if(faltantes)faltantes.textContent=(valor===""||!estandar)?"—":`${Math.max(0,estandar-personal)} personas`;
     if(valor===""||!estandar){cumplimiento.textContent="Pendiente";cumplimiento.className="cumplimiento-auto pendiente-auto";}
     else if(personal>estandar){cumplimiento.textContent=`⚠ EXCESO DE PERSONAL (+${personal-estandar})`;cumplimiento.className="cumplimiento-auto exceso-personal-auto";}
     else if(personal===estandar){cumplimiento.textContent="✓ CUMPLE";cumplimiento.className="cumplimiento-auto cumple-auto";}
-    else{cumplimiento.textContent="✕ NO CUMPLE";cumplimiento.className="cumplimiento-auto no-cumple-auto";}
+    else{cumplimiento.textContent=`⚠ PERSONAS FALTANTES (${estandar-personal})`;cumplimiento.className="cumplimiento-auto no-cumple-auto";}
 }
 function renderMODRetrabajo(){
     renderMODRETRABAJO();
