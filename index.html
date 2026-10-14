@@ -672,6 +672,7 @@ td select {
     color: #9a3d00;
     border: 1px solid #f3b27e;
 }
+.faltantes-auto {display:inline-block;min-width:75px;padding:9px 10px;border-radius:8px;background:#fff2c9;color:#856404;border:1px solid #ead58b;text-align:center;font-weight:bold;}
 
 /* =========================================================
    RESUMEN
@@ -1745,6 +1746,10 @@ td select {
 
                     <th>
                         MOD Personal
+                    </th>
+
+                    <th>
+                        Personas faltantes
                     </th>
 
                     <th>
@@ -3820,7 +3825,11 @@ function cargarResumen() {
                 </td>
 
                 <td>
-                    ${escapeHTML(item.personal)}
+                    ${escapeHTML(item.personalSitio ?? item.personal)}
+                </td>
+
+                <td>
+                    ${item.personasFaltantes == null ? "—" : escapeHTML(item.personasFaltantes)}
                 </td>
 
                 <td>
@@ -4122,6 +4131,10 @@ function exportarExcel() {
 
             "MOD Personal",
 
+            "Personal en sitio",
+
+            "Personas faltantes",
+
             "Unidades / min",
 
             "Kg/h Teórico",
@@ -4161,6 +4174,10 @@ function exportarExcel() {
                 Number(item.estandar),
 
                 Number(item.personal),
+
+                Number(item.personalSitio ?? item.personal),
+
+                item.personasFaltantes == null ? "" : Number(item.personasFaltantes),
 
                 Number(item.panerasMin),
 
@@ -5409,10 +5426,12 @@ function actualizarCumplimientoDescabezado(n){
     const select=document.getElementById('estandarDescabezado'+n);
     const input=document.getElementById('personalDescabezado'+n);
     const box=document.getElementById('cumplimientoDescabezado'+n);
+    const faltantes=document.getElementById('faltantesDescabezado'+n);
     if(!select||!input||!box)return;
     const option=select.options[select.selectedIndex];
     const estandar=Number(option?.dataset?.estandar||0);
     const personal=Number(input.value||0);
+    if(faltantes)faltantes.textContent=(!select.value||input.value.trim()==="")?"—":`${Math.max(0,estandar-personal)} personas`;
     if(!select.value||!personal||!estandar){
         box.textContent='Pendiente'; box.className='cumplimiento-auto pendiente-auto';
     }else if(personal>=estandar){
@@ -5461,7 +5480,7 @@ function renderMODCongelacion(){
       <div class="tabla-wrapper">
       <table id="tablaMOD"><thead><tr>
         <th>LÍNEA / EQUIPO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th>
-        <th>MOD PERSONA</th><th>CUMPLIMIENTO MOD</th>
+        <th>MOD PERSONA</th><th>PERSONAS FALTANTES</th><th>CUMPLIMIENTO MOD</th>
         <th>PANERAS / MIN</th><th>Kg/h TEÓRICO</th><th>Kg/h CALCULADO</th><th>CUMPLIMIENTO</th>
       </tr></thead><tbody id="cuerpoMOD"></tbody></table></div>`;
     agregarPresentacionFrio();
@@ -5484,7 +5503,8 @@ function agregarPresentacionFrio(){
       </td>
       <td><select class="presentacion" onchange="calcularKgHoraFrio(${id}); calcularCumplimientoPersonalFrio(${id})"><option value="">Seleccione equipo primero...</option></select></td>
       <td><div class="mod-estandar-auto" id="modEstandar_${id}">—<small>Seleccione presentación</small></div></td>
-      <td><input class="personalSitioFrio" type="number" min="0" step="1" placeholder="Personal en sitio" oninput="calcularCumplimientoPersonalFrio(${id})"></td>
+      <td><input class="personalSitioFrio" type="number" min="0" step="1" placeholder="Personal en sitio" oninput="calcularCumplimientoPersonalFrio(${id}); calcularFaltantesFrio(${id})"></td>
+      <td><div class="faltantes-auto" id="faltantesFrio_${id}">—</div></td>
       <td><div class="cumplimiento-auto pendiente-auto" id="cumplimientoPersonalFrio_${id}">Pendiente</div></td>
       <td><input class="bases" type="number" min="0" step="0.01" placeholder="Paneras/min" oninput="calcularKgHoraFrio(${id})"></td>
       <td><div class="calculo-kgh" id="teorico_${id}">—<small>Seleccione presentación</small></div></td>
@@ -5503,6 +5523,13 @@ function agregarPresentacionFrio(){
     }
 }
 
+function calcularFaltantesFrio(id){
+    const fila=document.getElementById("filaMOD_"+id); if(!fila)return;
+    const sel=fila.querySelector(".presentacion"); const opt=sel?.options[sel.selectedIndex];
+    const input=fila.querySelector(".personalSitioFrio"); const box=document.getElementById("faltantesFrio_"+id);
+    if(!box||!input)return; const estandar=Number(opt?.dataset?.mod||0);
+    box.textContent=(!opt?.value||!estandar||input.value.trim()==="")?"—":`${Math.max(0,estandar-Number(input.value))} personas`;
+}
 function calcularCumplimientoPersonalFrio(id){
     const fila=document.getElementById("filaMOD_"+id); if(!fila)return;
     const sel=fila.querySelector(".presentacion");
@@ -5511,6 +5538,7 @@ function calcularCumplimientoPersonalFrio(id){
     const input=fila.querySelector(".personalSitioFrio");
     const box=document.getElementById("cumplimientoPersonalFrio_"+id);
     if(!box||!input)return;
+    calcularFaltantesFrio(id);
     const valor=input.value.trim(); const personal=Number(valor);
     if(!opt||!opt.value||!estandar||valor===""){
         box.textContent="Pendiente"; box.className="cumplimiento-auto pendiente-auto";
@@ -5545,6 +5573,7 @@ function cargarPresentacionesFilaFrio(id){
     });
     calcularKgHoraFrio(id);
     calcularCumplimientoPersonalFrio(id);
+    calcularFaltantesFrio(id);
 }
 
 function calcularKgHoraFrio(id){
@@ -5591,7 +5620,7 @@ function renderMODClasificadora(){
       <h2>⚙️ CUMPLIMIENTO DE MOD — CLASIFICADORA</h2>
       <div class="tabla-wrapper"><table id="tablaMODClasif"><thead><tr>
         <th>CLASIFICADORA</th><th>TIPO DE PROCESO</th><th>TIPO DE ENVASE</th><th>PESO</th>
-        <th>MOD PERSONAL AUTOMÁTICA</th><th>MOD PERSONA</th><th>CUMPLIMIENTO MOD</th><th>KG TEÓRICO</th><th>UNIDADES/MIN</th><th>KG/H CALCULADO</th><th>CUMPLIMIENTO</th>
+        <th>MOD PERSONAL AUTOMÁTICA</th><th>MOD PERSONA (PERSONAL EN EL SITIO)</th><th>PERSONAS FALTANTES</th><th>CUMPLIMIENTO MOD</th><th>KG TEÓRICO (ESTÁNDAR)</th><th>UNIDADES/MIN</th><th>KG/H CALCULADO (UNIDAD × PESO × 60 MIN)</th><th>CUMPLIMIENTO</th>
       </tr></thead><tbody><tr>
         <td>
           <div class="mod-estandar-auto" id="clasifFija">${auditoria.equipo || "Seleccione equipo en Datos"}</div>
@@ -5619,6 +5648,7 @@ function renderMODClasificadora(){
         </td>
         <td><div class="mod-estandar-auto" id="modClasifAuto">—<small>Seleccione equipo en Datos</small></div><input id="personalClasif" type="hidden" value=""></td>
         <td><input id="personalSitioClasif" type="number" min="0" step="1" placeholder="Personal en sitio" oninput="calcularCumplimientoPersonalClasif()"></td>
+        <td><div class="faltantes-auto" id="faltantesClasif">—</div></td>
         <td><div class="cumplimiento-auto pendiente-auto" id="cumplimientoPersonalClasif">Pendiente</div></td>
         <td><div class="calculo-kgh" id="teoricoClasif">—<small>Seleccione proceso, envase y peso</small></div></td>
         <td>
@@ -5669,8 +5699,10 @@ function calcularCumplimientoPersonalClasif(){
     const estandar=Number(document.getElementById("personalClasif")?.value||0);
     const input=document.getElementById("personalSitioClasif");
     const box=document.getElementById("cumplimientoPersonalClasif");
+    const faltantes=document.getElementById("faltantesClasif");
     if(!input||!box)return;
     const valor=input.value.trim(); const personal=Number(valor);
+    if(faltantes)faltantes.textContent=(!estandar||valor==="")?"—":`${Math.max(0,estandar-personal)} personas`;
     if(!estandar||valor===""){
         box.textContent="Pendiente"; box.className="cumplimiento-auto pendiente-auto";
     }else if(personal>estandar){
@@ -6735,7 +6767,7 @@ if(areaActual === 'RECEPCION'){
 
             <div class="pregunta">
                 <div class="pregunta-texto">
-                    3.- ¿Se registra correctamente el producto que se esta retrabajando?
+                    3.- ¿Se registra correctamente la presentación y producto que ingresa a retrabajo?
                 </div>
 
                 <div class="opciones">
@@ -6912,6 +6944,16 @@ function irRendimiento(){
     auditoria.lider=lider;
     auditoria.jefe=jefe;
 
+    // Recepción no requiere pantalla ni preguntas de Rendimiento.
+    if(areaActual==='RECEPCION'){
+        auditoria.observacionesRendimiento='';
+        auditoria.preguntas=[];
+        auditoria.checks=0;
+        auditoria.evaluacion='NO APLICA';
+        renderMODRecepcion();
+        mostrarPantalla('pantallaMOD');
+        return;
+    }
     configurarRendimientoPorArea();
     mostrarPantalla('pantallaRendimiento');
 }
@@ -6964,6 +7006,7 @@ function renderMODRecepcion(){
           <th>TURNO</th>
           <th>ESTÁNDAR</th>
           <th>PERSONAL</th>
+          <th>PERSONAS FALTANTES</th>
           <th>CUMPLIMIENTO</th>
         </tr></thead>
         <tbody>
@@ -6984,6 +7027,7 @@ function renderMODRecepcion(){
               <input id="personalMODRecepcion" type="number" min="0" step="1"
                      placeholder="Personal de sitio" oninput="calcularMODRecepcion()">
             </td>
+            <td><div id="faltantesMODRecepcion" class="faltantes-auto">—</div></td>
             <td>
               <div id="cumplimientoMODRecepcion"
                    class="cumplimiento-auto pendiente-auto">Pendiente</div>
@@ -7012,9 +7056,11 @@ function calcularMODRecepcion(){
     const turno=document.getElementById("turnoMODRecepcion")?.value;
     const personal=Number(document.getElementById("personalMODRecepcion")?.value||0);
     const box=document.getElementById("cumplimientoMODRecepcion");
+    const faltantesBox=document.getElementById("faltantesMODRecepcion");
     if(!box)return;
     const estandar=turno==="PESCA VIVA"?31:turno==="TRADICIONAL"?38:0;
     const input=document.getElementById("personalMODRecepcion");
+    if(faltantesBox){faltantesBox.textContent=(!estandar||!input||input.value.trim()==="")?"—":`${Math.max(0,estandar-personal)} personas`;}
     if(!estandar || !input || input.value.trim()===""){
         box.textContent="Pendiente";
         box.className="cumplimiento-auto pendiente-auto";
@@ -7045,6 +7091,7 @@ function renderMODDescabezado(){
           <th>TURNO</th>
           <th>ESTÁNDAR</th>
           <th>PERSONAL</th>
+          <th>PERSONAS FALTANTES</th>
           <th>CUMPLIMIENTO</th>
         </tr></thead>
         <tbody>
@@ -7066,6 +7113,7 @@ function renderMODDescabezado(){
               <input id="personalMODDescabezado" type="number" min="0" step="1"
                      placeholder="Personal de sitio" oninput="calcularMODDescabezado()">
             </td>
+            <td><div id="faltantesMODDescabezado" class="faltantes-auto">—</div></td>
             <td>
               <div id="cumplimientoMODDescabezado"
                    class="cumplimiento-auto pendiente-auto">Pendiente</div>
@@ -7096,9 +7144,12 @@ function calcularMODDescabezado(){
     const cfg=document.getElementById("turnoMODDescabezado")?.value;
     const personal=Number(document.getElementById("personalMODDescabezado")?.value||0);
     const box=document.getElementById("cumplimientoMODDescabezado");
+    const faltantesBox=document.getElementById("faltantesMODDescabezado");
     if(!box)return;
     const estandar=cfg==="DIA_MODULO_1"?65:cfg==="DIA_MODULO_2"?65:cfg==="DIA_AMBOS"?130:0;
-    if(!estandar || document.getElementById("personalMODDescabezado")?.value===""){
+    const input=document.getElementById("personalMODDescabezado");
+    if(faltantesBox)faltantesBox.textContent=(!estandar||!input||input.value.trim()==="")?"—":`${Math.max(0,estandar-personal)} personas`;
+    if(!estandar || !input || input.value===""){
         box.textContent="Pendiente";
         box.className="cumplimiento-auto pendiente-auto";
     }else if(personal>estandar){
@@ -7124,9 +7175,9 @@ function renderMODRETRABAJO(){
       <h2 style="margin:0 0 12px;font-size:19px;">CUMPLIMIENTO DE MOD</h2>
       <div class="tabla-wrapper" style="width:100%;overflow-x:auto;">
         <table id="tablaMODRetrabajo" style="width:100%;table-layout:fixed;border-collapse:collapse;">
-          <colgroup><col style="width:21%;"><col style="width:31%;"><col style="width:16%;"><col style="width:16%;"><col style="width:16%;"></colgroup>
+          <colgroup><col style="width:17%;"><col style="width:25%;"><col style="width:14%;"><col style="width:16%;"><col style="width:14%;"><col style="width:14%;"></colgroup>
           <thead><tr>
-            <th>SUBPROCESO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th><th>MOD PERSONAL</th><th>CUMPLIMIENTO</th>
+            <th>SUBPROCESO</th><th>PRESENTACIÓN</th><th>MOD ESTÁNDAR</th><th>MOD PERSONA (PERSONAL EN EL SITIO)</th><th>PERSONAS FALTANTES</th><th>CUMPLIMIENTO</th>
           </tr></thead>
           <tbody id="cuerpoMODRetrabajo"><tr id="filaMODRetrabajo">
             <td style="padding:8px;vertical-align:middle;">
@@ -7145,6 +7196,9 @@ function renderMODRETRABAJO(){
             </td>
             <td style="padding:8px;vertical-align:middle;">
               <input id="personalRetrabajo" type="number" min="0" step="1" placeholder="Personas" oninput="actualizarMODRetrabajo()" style="display:block;width:100%;min-width:0;box-sizing:border-box;padding:9px 6px;font-size:13px;text-align:center;">
+            </td>
+            <td style="padding:8px;text-align:center;vertical-align:middle;">
+              <div id="faltantesRetrabajo" class="faltantes-auto" style="min-width:0;width:100%;box-sizing:border-box;padding:8px 4px;font-size:12px;">—</div>
             </td>
             <td style="padding:8px;text-align:center;vertical-align:middle;">
               <div id="cumplimientoRetrabajo" class="cumplimiento-auto pendiente-auto" style="min-width:0;width:100%;box-sizing:border-box;padding:8px 4px;font-size:12px;">Pendiente</div>
@@ -7212,15 +7266,18 @@ function actualizarMODRetrabajo(){
     if(!sel||!box)return;
     const item=(PRESENTACIONES_RETRABAJO[sub]||[])[Number(sel.value)];
     const cumplimiento=document.getElementById("cumplimientoRetrabajo");
+    const faltantes=document.getElementById("faltantesRetrabajo");
     const input=document.getElementById("personalRetrabajo");
     if(!sel.value || !item){
         box.innerHTML='—<small>Seleccione presentación</small>';
         if(cumplimiento){cumplimiento.textContent="Pendiente";cumplimiento.className="cumplimiento-auto pendiente-auto";}
+        if(faltantes)faltantes.textContent="—";
         return;
     }
     box.innerHTML=`${item.mod} personas<small>MOD estándar automática</small>`;
     if(!cumplimiento||!input)return;
     const valor=input.value.trim(); const personal=Number(valor); const estandar=Number(item.mod);
+    if(faltantes)faltantes.textContent=(valor===""||!estandar)?"—":`${Math.max(0,estandar-personal)} personas`;
     if(valor===""||!estandar){cumplimiento.textContent="Pendiente";cumplimiento.className="cumplimiento-auto pendiente-auto";}
     else if(personal>estandar){cumplimiento.textContent=`⚠ EXCESO DE PERSONAL (+${personal-estandar})`;cumplimiento.className="cumplimiento-auto exceso-personal-auto";}
     else if(personal===estandar){cumplimiento.textContent="✓ CUMPLE";cumplimiento.className="cumplimiento-auto cumple-auto";}
@@ -7234,47 +7291,28 @@ function renderMODRetrabajo(){
 ========================================================= */
 const finalizarOriginalReparado = finalizar;
 finalizar = function(){
-    if(auditoriaGuardada){
-        cargarResumen();
-        mostrarPantalla("pantallaFinal");
-        return;
-    }
-
+    if(auditoriaGuardada){cargarResumen();mostrarPantalla("pantallaFinal");return;}
     const mod=[];
+    const estadoPersonal=(n,e)=>n>e?"Exceso de personal":n===e?"Cumple":"No Cumple";
+    const faltantes=(n,e)=>Math.max(0,Number(e)-Number(n));
 
     if(areaActual==="RECEPCION"){
-        const turno=document.getElementById("turnoMODRecepcion")?.value;
-        const personal=document.getElementById("personalMODRecepcion")?.value||"";
-        if(!turno || !personal){
-            alert("Seleccione el turno y escriba el personal.");
-            return;
-        }
-        const estandar=turno==="DIA"?31:38;
-        const estandarTexto=turno==="DIA"?"PESCA VIVA":"RECEPCIÓN DE BINES";
-        mod.push({
-            linea:turno,
-            presentacion:estandarTexto,
-            kilos:0,tipo:"MOD",
-            estandar:String(estandar),
-            teorico:"",personal:String(personal),
-            panerasMin:"",kgHora:0,
-            cumplimiento:Number(personal)>estandar?"Exceso de personal":Number(personal)===estandar?"Cumple":"No Cumple",
-            cumplimientoPersonal:Number(personal)>estandar?"Exceso de personal":Number(personal)===estandar?"Cumple":"No Cumple"
-        });
-        auditoria.observacionesRendimiento=
-            (document.getElementById("observacionesRendimiento")?.value||"").trim();
+        const turno=document.getElementById("turnoMODRecepcion")?.value||"";
+        const personalVal=document.getElementById("personalMODRecepcion")?.value??"";
+        const estandar=turno==="PESCA VIVA"?31:turno==="TRADICIONAL"?38:0;
+        if(!turno||personalVal===""){alert("Seleccione el turno y escriba el personal.");return;}
+        const n=Number(personalVal);
+        mod.push({linea:turno,presentacion:turno,kilos:0,tipo:"MOD",estandar:String(estandar),teorico:"",personal:String(n),personalSitio:String(n),personasFaltantes:faltantes(n,estandar),panerasMin:"",kgHora:0,cumplimiento:estadoPersonal(n,estandar),cumplimientoPersonal:estadoPersonal(n,estandar)});
+        auditoria.observacionesRendimiento="";
+        auditoria.preguntas=[]; auditoria.checks=0; auditoria.evaluacion="NO APLICA";
     }
     else if(areaActual==="DESCABEZADO"){
         const cfg=document.getElementById("turnoMODDescabezado")?.value||"";
-        const personal=document.getElementById("personalMODDescabezado")?.value||"";
+        const personalVal=document.getElementById("personalMODDescabezado")?.value??"";
         const estandar=cfg==="DIA_MODULO_1"?65:cfg==="DIA_MODULO_2"?65:cfg==="DIA_AMBOS"?130:0;
-        if(!cfg||personal===""){
-            alert("Seleccione la configuración de Descabezado y complete el personal.");
-            return;
-        }
-        const n=Number(personal);
-        const cumplimiento=n>estandar?"Exceso de personal":n===estandar?"Cumple":"No Cumple";
-        mod.push({linea:"DIA",presentacion:cfg,kilos:0,tipo:"MOD",estandar:String(estandar),teorico:"",personal:String(personal),personalSitio:String(personal),panerasMin:"",kgHora:0,cumplimiento,cumplimientoPersonal: cumplimiento});
+        if(!cfg||personalVal===""){alert("Seleccione la configuración de Descabezado y complete el personal.");return;}
+        const n=Number(personalVal), cumplimiento=estadoPersonal(n,estandar);
+        mod.push({linea:"DIA",presentacion:cfg,kilos:0,tipo:"MOD",estandar:String(estandar),teorico:"",personal:String(n),personalSitio:String(n),personasFaltantes:faltantes(n,estandar),panerasMin:"",kgHora:0,cumplimiento,cumplimientoPersonal: cumplimiento});
     }
     else if(areaActual==="CLASIFICADORA"){
         const c=document.getElementById("clasifSel")?.value;
@@ -7285,68 +7323,51 @@ finalizar = function(){
         const pan=document.getElementById("panerasClasif")?.value||"";
         const item=ESTANDARES_CLASIF.find(x=>x.p===p&&x.e===e&&Math.abs(x.w-w)<0.011);
         const est=item&&c?Number(item.v[Number(c)-1]):null;
-        const personalSitio=document.getElementById("personalSitioClasif")?.value||"";
-        if(!c||!item||!est||!personal||!pan||personalSitio===""){
-            alert("Complete proceso, envase, peso, unidades/min y MOD persona (personal en el sitio).");
-            return;
-        }
-        const kg=Number(pan)*w*60;
-        mod.push({
-            linea:"Clasificadora "+c,
-            presentacion:p+" / "+e+" / "+String(w).replace(".",","),
-            kilos:w,tipo:"CARRILES",
-            estandar:String(est),teorico:String(est),
-            personal:String(personal),personalSitio:String(document.getElementById("personalSitioClasif")?.value||""),panerasMin:String(pan),kgHora:kg,
-            cumplimiento:kg>=est?"Cumple":"No Cumple",
-            cumplimientoPersonal:(()=>{const sitio=document.getElementById("personalSitioClasif")?.value||"";const n=Number(sitio);const base=Number(document.getElementById("personalClasif")?.value||0);return sitio===""?"Pendiente":n>base?"Exceso de personal":n===base?"Cumple":"No Cumple";})()
-        });
+        const sitio=document.getElementById("personalSitioClasif")?.value??"";
+        if(!c||!item||!est||!personal||!pan||sitio===""){alert("Complete proceso, envase, peso, unidades/min y MOD persona (personal en el sitio).");return;}
+        const kg=Number(pan)*w*60, n=Number(sitio), base=Number(personal);
+        mod.push({linea:"Clasificadora "+c,presentacion:p+" / "+e+" / "+String(w).replace(".",","),kilos:w,tipo:"CARRILES",estandar:String(base),teorico:String(est),personal:String(base),personalSitio:String(n),personasFaltantes:faltantes(n,base),panerasMin:String(pan),kgHora:kg,cumplimiento:kg>=est?"Cumple":"No Cumple",cumplimientoPersonal:estadoPersonal(n,base)});
     }
     else if(areaActual==="CONGELACION"){
         const filas=document.querySelectorAll("#cuerpoMOD tr");
         if(!filas.length){alert("No existe la tabla de Congelación.");return;}
         filas.forEach(fila=>{
-            const sel=fila.querySelector(".presentacion");
-            const o=sel?.options[sel.selectedIndex];
-            const personalSitio=fila.querySelector(".personalSitioFrio")?.value||"";
+            const sel=fila.querySelector(".presentacion"), o=sel?.options[sel.selectedIndex];
+            const sitio=fila.querySelector(".personalSitioFrio")?.value??"";
             const pan=fila.querySelector(".bases")?.value||"";
             const linea=fila.querySelector(".lineaCongelacion")?.value||"";
-            if(!o||!o.value||personalSitio===""||!pan)return;
-            const kilos=Number(o.dataset.kilos);
-            const tipo=o.dataset.tipo||"CARRILES";
-            const est=o.dataset.mod||"";
-            const teor=o.dataset.teorico||"";
+            if(!o||!o.value||sitio===""||!pan)return;
+            const kilos=Number(o.dataset.kilos), tipo=o.dataset.tipo||"CARRILES", est=o.dataset.mod||"", teor=o.dataset.teorico||"";
             const kg=tipo==="BASES"?Number(pan)*4*4*60*kilos:Number(pan)*4*60*kilos;
-            const cumplimientoPersonal=!Number(est)?"Pendiente":Number(personalSitio)>Number(est)?"Exceso de personal":Number(personalSitio)===Number(est)?"Cumple":"No Cumple";
+            const n=Number(sitio), e=Number(est);
             const auto=fila.querySelector("#cumplimiento_1");
-            const cump=auto?.textContent.includes("CUMPLE")&&!auto?.textContent.includes("NO CUMPLE")?"Cumple":auto?.textContent.includes("NO CUMPLE")?"No Cumple":"Pendiente";
-            mod.push({linea,presentacion:o.dataset.nombre,kilos,tipo,estandar:est,teorico:teor,personal:String(personalSitio),personalSitio:String(personalSitio),panerasMin:String(pan),kgHora:kg,cumplimiento:cump,cumplimientoPersonal});
+            const cump=auto?.textContent.includes("NO CUMPLE")?"No Cumple":auto?.textContent.includes("CUMPLE")?"Cumple":"Pendiente";
+            mod.push({linea,presentacion:o.dataset.nombre||o.textContent,kilos,tipo,estandar:est,teorico:teor,personal:String(n),personalSitio:String(n),personasFaltantes:faltantes(n,e),panerasMin:String(pan),kgHora:kg,cumplimiento:cump,cumplimientoPersonal:!e?"Pendiente":estadoPersonal(n,e)});
         });
         if(!mod.length){alert("Complete presentación, MOD persona y paneras/min en Congelación.");return;}
     }
-    else{
-        alert("Área no configurada para cumplimiento de MOD.");
-        return;
+    else if(areaActual==="RETRABAJO"){
+        const sub=document.getElementById("subprocesoRetrabajo")?.value||"";
+        const sel=document.getElementById("presentacionRetrabajo");
+        const personalVal=document.getElementById("personalRetrabajo")?.value??"";
+        const item=(PRESENTACIONES_RETRABAJO[sub]||[])[Number(sel?.value)];
+        if(!sub||!sel?.value||!item||!Number(item.mod)||personalVal===""){
+            alert("Seleccione subproceso, presentación y complete el personal de Retrabajo.");return;
+        }
+        const n=Number(personalVal), e=Number(item.mod);
+        mod.push({linea:sub,presentacion:item.nombre,kilos:0,tipo:"MOD",estandar:String(e),teorico:item.estandar||"",personal:String(n),personalSitio:String(n),personasFaltantes:faltantes(n,e),panerasMin:"",kgHora:0,cumplimiento:estadoPersonal(n,e),cumplimientoPersonal:estadoPersonal(n,e)});
     }
+    else {alert("Área no configurada para cumplimiento de MOD.");return;}
 
     auditoria.id=Date.now().toString();
     auditoria.fechaRegistro=new Date().toLocaleString("es-EC");
     auditoria.mod=mod;
-    auditoria.observacionesMOD=
-        (document.getElementById("observacionesMOD")?.value||"").trim();
-
-    if(areaActual!=="RECEPCION" && areaActual!=="RETRABAJO"){
+    auditoria.observacionesMOD=(document.getElementById("observacionesMOD")?.value||"").trim();
+    if(areaActual!=="RECEPCION"){
         auditoria.preguntas=[];
-        for(let i=1;i<=7;i++){
-            const r=document.querySelector('input[name="p'+i+'"]:checked');
-            auditoria.preguntas.push({numero:i,respuesta:r?r.value:""});
-        }
+        for(let i=1;i<=7;i++){const r=document.querySelector('input[name="p'+i+'"]:checked');auditoria.preguntas.push({numero:i,respuesta:r?r.value:""});}
     }
-
-    guardarAuditoria();
-    auditoriaGuardada=true;
-    cargarResumen();
-    mostrarPantalla("pantallaFinal");
-    actualizarContadorHistorial();
+    guardarAuditoria(); auditoriaGuardada=true; cargarResumen(); mostrarPantalla("pantallaFinal"); actualizarContadorHistorial();
 };
 </script>
 </body>
