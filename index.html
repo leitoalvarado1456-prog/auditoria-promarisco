@@ -13,6 +13,7 @@
 <!-- LIBRERÍA PARA EXPORTAR A EXCEL -->
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
 <style>
 
@@ -878,6 +879,22 @@ td select {
 }
 .mod-referencia{font-size:12px;color:#75848b;margin-top:4px;}
 
+
+/* CONSULTA DE ESTÁNDARES MOD — SOLO LECTURA */
+.consulta-estandar-mod{display:none;margin-top:22px;border:1px solid #c9dce2;border-radius:12px;background:#f8fbfc;padding:20px;}
+.consulta-estandar-mod .consulta-cabecera{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.consulta-estandar-mod h3{color:#004b63;font-size:20px;}
+.consulta-estandar-mod .consulta-filtros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin-bottom:18px;}
+.consulta-estandar-mod .consulta-tabla{overflow-x:auto;width:100%;border-radius:8px;}
+.consulta-estandar-mod table{min-width:0;width:100%;border-collapse:collapse;}
+.consulta-estandar-mod th{background:#00566d;color:#fff;padding:11px;text-align:left;}
+.consulta-estandar-mod td{padding:9px 11px;border:1px solid #d8e2e6;background:#fff;}
+.consulta-estandar-mod td:last-child,.consulta-estandar-mod th:last-child{text-align:center;width:90px;}
+.consulta-estandar-mod .consulta-presentacion{background:#eaf4f7;color:#004b63;font-weight:bold;padding:13px;border-radius:8px;margin-bottom:12px;}
+.consulta-estandar-mod .consulta-total td{font-weight:bold;background:#eef8fa;color:#004b63;}
+.consulta-estandar-mod .consulta-nota{font-size:12px;color:#687780;margin-top:10px;}
+@media(max-width:700px){.consulta-estandar-mod{padding:14px}.consulta-estandar-mod .consulta-filtros{grid-template-columns:1fr}.consulta-estandar-mod table{min-width:0}}
+
 </style>
 
 </head>
@@ -1625,6 +1642,39 @@ td select {
 <div class="card">
 
     <div id="contenedorMODArea"></div>
+
+    <div style="margin-top:22px;">
+        <button class="btn btn-primary" type="button" onclick="abrirConsultaEstandarMOD()">
+            📋 Consultar estándares MOD
+        </button>
+    </div>
+
+    <div id="consultaEstandarMOD" class="consulta-estandar-mod" aria-live="polite">
+        <div class="consulta-cabecera">
+            <h3 id="tituloConsultaEstandarMOD">📋 Consulta de estándares MOD</h3>
+            <button class="btn btn-secondary" type="button" onclick="cerrarConsultaEstandarMOD()">Cerrar consulta ✕</button>
+        </div>
+        <p style="color:#687780;margin-bottom:16px;">Se muestran únicamente las líneas, equipos y procesos del área seleccionada para esta auditoría. Seleccione una opción y luego la presentación para consultar el estándar. Esta sección es únicamente de consulta y no modifica el cumplimiento de MOD.</p>
+        <div class="consulta-filtros">
+            <div class="campo">
+                <label for="consultaLineaMOD">LÍNEA / EQUIPO / PROCESO</label>
+                <select id="consultaLineaMOD" onchange="cargarPresentacionesConsultaMOD()">
+                    <option value="">Seleccione una línea, equipo o proceso...</option>
+                </select>
+            </div>
+            <div class="campo">
+                <label for="consultaPresentacionMOD">PRESENTACIÓN</label>
+                <select id="consultaPresentacionMOD" onchange="mostrarTablaConsultaMOD()" disabled>
+                    <option value="">Seleccione primero una línea...</option>
+                </select>
+            </div>
+        </div>
+        <div id="resultadoConsultaMOD">
+            <p style="color:#75848b;text-align:center;padding:18px;">Seleccione una línea, equipo o proceso del área para consultar sus estándares.</p>
+        </div>
+        <p class="consulta-nota">Consulta basada en las tablas de estándares del archivo Excel actualizado proporcionado.</p>
+    </div>
+
 
     <div class="campo" style="margin-top:25px;">
         <label>OBSERVACIONES GENERALES</label>
@@ -3931,7 +3981,125 @@ function obtenerRespuesta(nombre) {
    EXPORTAR AUDITORIA ACTUAL A EXCEL
 ========================================================= */
 
-function exportarExcel() {
+async function descargarLibroExcelFormateado(libro,nombreArchivo){
+    if(typeof ExcelJS==="undefined"){
+        alert("No se pudo cargar el formato de Excel. Verifique su conexión a Internet e intente nuevamente.");
+        return false;
+    }
+    try{
+        const datos=XLSX.write(libro,{bookType:"xlsx",type:"array"});
+        const libroFormateado=new ExcelJS.Workbook();
+        await libroFormateado.xlsx.load(datos);
+
+        libroFormateado.eachSheet(function(hoja){
+            const ultimaFila=hoja.rowCount;
+            const ultimaColumna=hoja.columnCount;
+            if(!ultimaFila||!ultimaColumna)return;
+
+            for(let numeroColumna=1;numeroColumna<=ultimaColumna;numeroColumna++){
+                let ancho=12;
+                hoja.eachRow(function(fila){
+                    const texto=fila.getCell(numeroColumna).text||"";
+                    ancho=Math.max(ancho,Math.min(texto.length+2,52));
+                });
+                hoja.getColumn(numeroColumna).width=ancho;
+            }
+
+            hoja.eachRow(function(fila,numeroFila){
+                fila.eachCell({includeEmpty:true},function(celda){
+                    celda.alignment={vertical:"top",wrapText:true};
+                    if(hoja.name!=="Resumen"&&numeroFila>1){
+                        celda.fill={type:"pattern",pattern:"solid",fgColor:{argb:numeroFila%2===0?"FFF1F7F9":"FFFFFFFF"}};
+                    }
+                    celda.border={
+                        top:{style:"thin",color:{argb:"FFD8E2E6"}},
+                        bottom:{style:"thin",color:{argb:"FFD8E2E6"}},
+                        left:{style:"thin",color:{argb:"FFD8E2E6"}},
+                        right:{style:"thin",color:{argb:"FFD8E2E6"}}
+                    };
+                });
+            });
+
+            if(hoja.name==="Resumen"){
+                hoja.getRow(1).height=26;
+                hoja.getRow(1).eachCell(function(celda){
+                    celda.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF004B63"}};
+                    celda.font={bold:true,color:{argb:"FFFFFFFF"},size:15};
+                    celda.alignment={vertical:"middle",wrapText:true};
+                });
+                hoja.eachRow(function(fila){
+                    const titulo=String(fila.getCell(1).value||"").trim();
+                    if(["INFORMACIÓN GENERAL","RENDIMIENTO","OBSERVACIONES GENERALES MOD"].includes(titulo)){
+                        fila.eachCell({includeEmpty:true},function(celda){
+                            celda.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFDCEEF2"}};
+                            celda.font={bold:true,color:{argb:"FF004B63"}};
+                        });
+                    }
+                });
+                return;
+            }
+
+            const encabezado=hoja.getRow(1);
+            encabezado.height=32;
+            encabezado.eachCell({includeEmpty:true},function(celda){
+                celda.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF00566D"}};
+                celda.font={bold:true,color:{argb:"FFFFFFFF"}};
+                celda.alignment={horizontal:"center",vertical:"middle",wrapText:true};
+            });
+            hoja.views=[{state:"frozen",ySplit:1,topLeftCell:"A2"}];
+            const encabezados=[];
+            const nombresUsados=new Set();
+            for(let columna=1;columna<=ultimaColumna;columna++){
+                let nombre=String(encabezado.getCell(columna).text||"").trim()||"Columna "+columna;
+                const nombreBase=nombre;
+                let sufijo=2;
+                while(nombresUsados.has(nombre.toLocaleLowerCase())){
+                    nombre=nombreBase+" ("+sufijo+")";
+                    sufijo++;
+                }
+                nombresUsados.add(nombre.toLocaleLowerCase());
+                encabezados.push({name:nombre});
+            }
+            const filas=[];
+            for(let numeroFila=2;numeroFila<=ultimaFila;numeroFila++){
+                const fila=hoja.getRow(numeroFila);
+                filas.push(encabezados.map(function(_,indice){
+                    return fila.getCell(indice+1).value??null;
+                }));
+            }
+            hoja.addTable({
+                name:"TablaDatos"+hoja.id,
+                ref:"A1",
+                headerRow:true,
+                totalsRow:false,
+                style:{
+                    theme:"TableStyleMedium2",
+                    showRowStripes:true
+                },
+                columns:encabezados,
+                rows:filas
+            });
+        });
+
+        const contenido=await libroFormateado.xlsx.writeBuffer();
+        const archivo=new Blob([contenido],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+        const url=URL.createObjectURL(archivo);
+        const enlace=document.createElement("a");
+        enlace.href=url;
+        enlace.download=nombreArchivo;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+        setTimeout(function(){URL.revokeObjectURL(url);},1000);
+        return true;
+    }catch(error){
+        console.error("No se pudo generar el Excel con formato.",error);
+        alert("No se pudo generar el archivo Excel con formato. "+(error?.message||"Verifique los datos e intente nuevamente."));
+        return false;
+    }
+}
+
+async function exportarExcel() {
 
     if(
         typeof XLSX === "undefined"
@@ -4385,13 +4553,7 @@ function exportarExcel() {
     =========================================================
     */
 
-    XLSX.writeFile(
-
-        libro,
-
-        nombreArchivo
-
-    );
+    await descargarLibroExcelFormateado(libro,nombreArchivo);
 
 }
 
@@ -4400,7 +4562,7 @@ function exportarExcel() {
    EXPORTAR TODO EL HISTORIAL
 ========================================================= */
 
-function exportarHistorialExcel() {
+async function exportarHistorialExcel() {
 
     if(
         typeof XLSX === "undefined"
@@ -5045,13 +5207,8 @@ function exportarHistorialExcel() {
     =========================================================
     */
 
-    XLSX.writeFile(
-
-        libro,
-
-        nombreArchivo
-
-    );
+    const descargado=await descargarLibroExcelFormateado(libro,nombreArchivo);
+    if(!descargado)return;
 
 
     alert(
@@ -7226,6 +7383,43 @@ const PRESENTACIONES_RETRABAJO = {
   ]
 };
 
+const ESTANDARES_RETRABAJO_CONSULTA = {
+    REETIQUETEO:[
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","1"],["Retiran etiqueta de la funda","2"],["Codificador de funda","2"],["Transporta material desechado a reciclaje","1"],["Llenan y sellan el máster","5"],["D.Metales","1"],["Arman máster","1"],["Pegan etiqueta en máster","2"],["Paletizadores","3"]],total:"23"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","2"],["Desarman el máster","1"],["Retiran etiqueta de la funda","2"],["Codificador de funda","2"],["Transporta material desechado a reciclaje","1"],["Llenan y sellan el máster","5"],["D.Metales","1"],["Arman máster","1"],["Pegan etiqueta en máster","1"],["Paletizadores","3"]],total:"21"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Transporta material desechado a reciclaje","1"],["D.Metales","1"],["Arman máster","1"],["Pegan etiqueta en máster","4"]],total:"9"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","2"],["Desarman el máster","1"],["Retiran etiqueta de la funda","2"],["Codificador de funda","2"],["Transporta material desechado a reciclaje","1"],["Llenan y sellan el máster","6"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","2"],["Paletizadores","4"]],total:"25"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","1"],["Retiran etiqueta de la caja","2"],["Codificador de caja","2"],["Transporta material desechado a reciclaje","1"],["Cambiador de cajas","1"],["Llenan y sellan el máster","5"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Operador de Zunchadora","1"],["Paletizadores","2"]],total:"24"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","1"],["Retiran etiqueta de la caja","2"],["Codificador de caja","2"],["Transporta material desechado a reciclaje","1"],["Cambiador de cajas","1"],["Llenan y sellan el máster","5"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Operador de Zunchadora","1"],["Paletizadores","2"]],total:"24"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","1"],["Retiran etiqueta de la caja","2"],["Codificador de caja","2"],["Transporta material desechado a reciclaje","1"],["Cambiador de cajas","1"],["Llenan y sellan el máster","5"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Operador de Zunchadora","1"],["Paletizadores","2"]],total:"24"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Codificador de Sombrero","2"],["Personal de Film","3"]],total:"7"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Codificador de Sombrero","2"],["Personal de Film","3"]],total:"7"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran Retractilado","4"],["Retiran etiqueta de la base","2"],["Codificador de base","2"],["Transporta material desechado a reciclaje","1"],["Cambiador de tapas","1"],["Direcciona a Retractilado","1"],["Operador de Retractiladora","1"],["Revisa retractilado","1"],["D.Metales","1"],["Llenan y sellan el máster","5"],["Pegan etiqueta en máster","1"],["Paletizadores","2"]],total:"29"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran Tapa de base retractilada","2"],["Retiran Retractilado","4"],["Retiran etiqueta de la base","2"],["Codificador de base","2"],["Transporta material desechado a reciclaje","1"],["Direcciona a Retractilado","1"],["Operador de Retractiladora","1"],["Revisa retractilado","1"],["Cambiador de tapas","3"],["D.Metales","1"],["Llenan y sellan el máster","5"],["Pegan etiqueta en máster","1"],["Paletizadores","2"]],total:"33"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran Retractilado","4"],["Retiran etiqueta de la base","2"],["Codificador de base","2"],["Transporta material desechado a reciclaje","1"],["Direcciona a Retractilado","1"],["Operador de Retractiladora","1"],["Revisa retractilado","1"],["D.Metales","1"],["Llenan y sellan el máster","5"],["Pegan etiqueta en máster","1"],["Paletizadores","2"]],total:"28"}
+    ],
+    REEMPAQUE:[
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran etiqueta de la funda","2"],["Codificador de funda","2"],["Transporta material desechado a reciclaje","1"],["Llenan y sellan el máster","6"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Paletizadores","3"]],total:"25"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran etiqueta de la funda","2"],["Codificador de funda","2"],["Transporta material desechado a reciclaje","1"],["Llenan y sellan el máster","6"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Paletizadores","3"]],total:"25"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Transporta material desechado a reciclaje","1"],["Llenan y sellan el máster","7"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Paletizadores","3"]],total:"22"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","3"],["Retiran etiqueta de la funda","2"],["Codificador de funda","2"],["Transporta material desechado a reciclaje","1"],["Llenan y sellan el máster","7"],["D.Metales","1"],["Arman máster","3"],["Pegan etiqueta en máster","2"],["Paletizadores","3"]],total:"29"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","1"],["Codificador de caja","2"],["Transporta material desechado a reciclaje","1"],["Cambiador de cajas","8"],["Llenan y sellan el máster","4"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Operador de Zunchadora","1"],["Paletizadores","2"]],total:"28"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","1"],["Codificador de caja","2"],["Transporta material desechado a reciclaje","1"],["Cambiador de cajas","8"],["Llenan y sellan el máster","4"],["D.Metales","1"],["Arman máster","2"],["Pegan etiqueta en máster","1"],["Operador de Zunchadora","1"],["Paletizadores","2"]],total:"28"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Codificador de Sombrero","2"],["Personal de Film","3"]],total:"7"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran Retractilado","4"],["Retiran etiqueta de la base","2"],["Codificador de base","2"],["Transporta material desechado a reciclaje","1"],["Cambiador de tapas","1"],["Direcciona a Retractilado","1"],["Operador de Retractiladora","1"],["Revisa retractilado","1"],["D.Metales","1"],["Llenan y sellan el máster","5"],["Pegan etiqueta en máster","1"],["Paletizadores","2"]],total:"29"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran Tapa de base retractilada","2"],["Retiran Retractilado","4"],["Retiran etiqueta de la base","2"],["Codificador de base","2"],["Transporta material desechado a reciclaje","1"],["Direcciona a Retractilado","1"],["Operador de Retractiladora","1"],["Revisa retractilado","1"],["Cambiador de tapas","3"],["D.Metales","1"],["Llenan y sellan el máster","5"],["Pegan etiqueta en máster","1"],["Paletizadores","2"]],total:"33"},
+        {rows:[["Liquidador de PT","1"],["Codificador principal","1"],["Abastecedor de Mp en mesa","3"],["Desarman el máster","2"],["Retiran Retractilado","4"],["Retiran etiqueta de la base","2"],["Codificador de base","2"],["Transporta material desechado a reciclaje","1"],["Direcciona a Retractilado","1"],["Operador de Retractiladora","1"],["Revisa retractilado","1"],["D.Metales","1"],["Llenan y sellan el máster","5"],["Pegan etiqueta en máster","1"],["Paletizadores","2"]],total:"28"}
+    ],
+    REPROCESO:[
+        {rows:[["Pesadoras","5"],["Llenadoras","5"],["Arregladoras","8"],["Desarma master","1"],["Vacia a paneras","1"],["Abastecedor de MP","2"],["Verificadoras de retractilado","2"],["Estuchadoras","2"],["Etiquetadoras","1"],["Armado de master","1"],["Selladores y llenadores de master","2"],["Estibador","1"],["Injekt","1"],["DM","1"],["Retractiladora","1"],["Liquidador","1"],["Codificadora","1"],["Check Weight","1"],["Armado de Bases","6"]],total:"43"},
+        {rows:[["Pesadoras","7"],["Llenadoras","7"],["Arregladoras","14"],["Desarma master","1"],["Vacia a paneras","1"],["Abastecedor de MP","2"],["Verificadoras de retractilado","2"],["Estuchadoras","2"],["Etiquetadoras","1"],["Armado de master","1"],["Selladores y llenadores de master","3"],["Estibador","1"],["Injekt","1"],["DM","1"],["Retractiladora","1"],["Liquidador","1"],["Codificadora","1"],["Check Weight (Caja y Máster)","2"],["Armado de Bases","6"]],total:"55"},
+        {rows:[["Liquidador de PT","1"],["Codificador","1"],["Decoradoras","36"],["Pesadoras","2"],["Llenadoras","2"],["Abastecedores MP","2"],["Bajador de bases a paneras","1"],["Paletizador","1"],["Cambian producto a panera","2"],["Desarmador de máster","1"],["Descongeladores","4"]],total:"53"},
+        {rows:[["Liquidador de MP/PT","1"],["Codificador principal","1"],["Baja paneras a mesa","1"],["Sopletea","1"],["Retira bases de paneras","1"],["Envia producto a retractil","1"],["Operador Retractiladora","1"],["Revisa mal retractilado","1"],["Llenadores","2"],["Selladoras de estuche","2"],["Separador de bases","1"],["Masterizadoras","2"],["Armador de master","1"],["DM","1"],["Estibador","1"],["Codificador de máster","1"],["Desaloja paneras vacías","1"]],total:"20"},
+        {rows:[["Liquidador de MP","1"],["Desarma máster","1"],["Voltea producto en panera","2"],["Glaseadores","1"],["Envía producto a banda","2"],["Arreglan producto en banda MP","4"],["Operador Frigoscandia","1"],["Codificador","1"],["Direcciona producto en banda salida","1"],["Reciben producto","2"],["Llenadores","2"],["Pesador","1"],["Sellador","1"],["DM","1"],["Armador de máster","1"],["Codificador de máster","1"],["Colocan funda en máster","1"],["Estibador","2"]],total:"26"},
+        {rows:[["Liquidador de PT","1"],["Codificador","1"],["Pesadoras","3"],["Llenadoras","3"],["Abastecedores MP","2"],["Desarmador de máster","1"],["Descongeladores","3"],["Cambian producto a panera","2"],["Personal en banda","2"],["Operador Frigoscandia","1"],["Direcciona bases","1"],["Soplador","1"],["Operador retractiladora","1"],["Revisan mal retractil","2"],["Colocan tapas en base","2"],["Operador Inkjet","1"],["Llenan y sellan máster","3"],["Armador de máster","1"],["Codificador de máster","1"],["DM","1"],["Estibador","1"]],total:"33"}
+    ]
+};
+
 function cargarPresentacionesRetrabajo(){
     const sub=document.getElementById("subprocesoRetrabajo")?.value||"";
     const sel=document.getElementById("presentacionRetrabajo");
@@ -7347,6 +7541,381 @@ finalizar = function(){
     }
     guardarAuditoria(); auditoriaGuardada=true; cargarResumen(); mostrarPantalla("pantallaFinal"); actualizarContadorHistorial();
 };
+
+/* =========================================================
+   CONSULTA DE ESTÁNDARES MOD — VISTA DE SOLO LECTURA
+   Los datos se tomaron del Excel de estándares actualizado.
+========================================================= */
+const ESTANDARES_CONSULTA_MOD = [{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"3x6Kg Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","27"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"34"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"3x6Kg Agama Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"2x6Kg Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x20Kg Talla 30-40 (6000kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","27"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","1"],["Armadores de máster","2"],["Colocan funda al máster","1"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"34"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"10x4 lbs Sunday / Panamei / Olazul Talla 30-40 (3300kg/h) Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","38"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en master","2"],["Armadores de master","1"],["Llenadores de master","4"],["Zunchador","1"],["D.Metales","1"],["Paletizadores","2"],["Liquidador pt","1"],["Líder","1"]],"total":"45"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"3x6Kg Talla 30-40 (7200 kg/h) Marel","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","27"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"34"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"10x4 lbs USA Sunday/Coral Marel Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","38"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en master","2"],["Armadores de master","1"],["Llenadores de master","4"],["Zunchador","1"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"49"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"10x4 lbs Sunday / Panamei / Olazul Marel Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","38"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en master","2"],["Armadores de master","1"],["Llenadores de master","4"],["Zunchador","1"],["D.Metales","1"],["Paletizadores","2"],["Liquidador pt","1"],["Líder","1"]],"total":"49"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"2x6Kg Marel","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","29"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"3.95Kg Talla 30-40 (4500) kg/h Marel","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","17"],["Pega etiqueta en máster","1"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Operador de retractiladora","1"],["Arman máster","1"],["Llenan máster","2"],["Sellan máster","2"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"28"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"2.94Kg retractil Talla 30-40 (5700kg/h) Marel","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","19"],["Pega etiqueta en máster","1"],["Suben bases a banda","4"],["Operador retractiladora","1"],["Revisan bases retractiladas","2"],["Regresa mal retractil","1"],["Arman y Llenan máster","4"],["Dobla Solapas y Direccionador a selladora","1"],["D. Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"30"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x20Kg Talla Small/Medium/Large (7200 kg/h) Marel","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","27"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","1"],["Armadores de máster","2"],["Colocan funda al máster","1"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"34"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"6x2Kg China retractilado Talla 30-40 (5900kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Rayan tapa","2"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"6x2Kg korea retractilado Talla 30-40 (5900kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Rayan tapa","1"],["Pegan etiqueta en tapas","1"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"6x2 Kg Abad/Riazor/China AB Talla 30-40 (5500 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","47"],["Pega etiqueta en caja","3"],["Pega etiqueta en máster","2"],["Sacan tarrinas de panera a la banda","2"],["Desmoldadores","22"],["Reciben y desalojan paneras vacías","2"],["Recoge tarrinas vacías","2"],["Desaloja tarrinas vacías","1"],["Armador de máster","2"],["Llenadores de máster","4"],["Selladores de máster","2"],["D. Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"54"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"3x6Kg Agama Talla 30-40 (7200 kg/h) Marel","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","29"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"10x4 lbs USA Sunday/Coral Talla 30-40 (3300kg/h) Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","38"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en master","2"],["Armadores de master","1"],["Llenadores de master","4"],["Zunchador","1"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"45"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1.66 Hellas Talla 30-40 (3700kg/h) Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","38"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en máster","2"],["Armadores de máster","1"],["Llenadores de máster","4"],["Zunchador","1"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"],["Código: DMC-MOD-01",""],["Versión: 1",""],["PRESENTACIÓN 1x6Kg Agama Marel",""],["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","34"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","3"],["Pegan etiqueta en funda","2"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"41"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x6 kg S/M Unifish Marel","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","32"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en funda","2"],["Pegan etiqueta en master","1"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"39"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"6x2Kg China retractilado. Talla 30-40 (6250 kg/h) Marel","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","30"],["Rayan tapa","2"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Pega etiqueta en base","1"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"41"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"6x2Kg Korea retractilado. Talla 30-40 (6250 kg/h) Marel","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","29"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Pegan etiqueta en tapas","2"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"40"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"6x2 Kg Abad/Riazor/China AB Marel","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","47"],["Pega etiqueta en caja","3"],["Pega etiqueta en máster","2"],["Sacan tarrinas de panera a la banda","2"],["Desmoldadores","22"],["Reciben y desalojan paneras vacías","2"],["Recoge tarrinas vacías","2"],["Desaloja tarrinas vacías","1"],["Armador de máster","2"],["Llenadores de máster","4"],["Selladores de máster","2"],["D. Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"58"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"3x4Kg Marel","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","21"],["Pega etiqueta en máster","1"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Operador retractiladora","1"],["Revisan bases retractiladas","1"],["Regresa mal retractil","1"],["Arman máster","1"],["Llenan máster","2"],["Sellan máster","2"],["Pesador de master","1"],["Anotador de pesos","1"],["D. Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"32"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x6Kg Riazor Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","32"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","3"],["Pegan etiqueta en funda","0"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"39"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x6Kg retractil fenix Talla 30-40 (4500 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","17"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisan base retractilada","2"],["Regresa mal retractilado","1"],["Pegan etiqueta en bases","2"],["Operador de retractiladora","1"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"24"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"45x3.98Kg Talla 30-40 (7000 kg/h)","rows":[["MOD CABECERA DE LÍNEA","8"],["Abastecedores de LC","2"],["Cochero","2"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","22"],["Pega etiqueta en lámina (Sombrero)","1"],["Suben bases a banda","4"],["Direcciona a retractiladora","1"],["Operador de retractiladora","1"],["Empuja bases a palletizadores","2"],["Arma láminas (Sombreros)","2"],["D. Metales","1"],["Palletizadores","8"],["Liquidador P/T","1"],["Líder","1"]],"total":"30"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x6Kg retractil fenix Marel","rows":[["MOD CABECERA DE LÍNEA","11"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","17"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisan base retractilada","2"],["Regresa mal retractilado","1"],["Pegan etiqueta en bases","2"],["Operador de retractiladora","1"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"28"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x6Kg Riazor Marel","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","32"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","3"],["Pegan etiqueta en funda","0"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"39"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x6Kg Agama Marel","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de (marel-cbp) y adv","2"],["MOD FINAL DE LÍNEA","34"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","3"],["Pegan etiqueta en funda","2"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"41"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1x6Kg Agama Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","34"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","3"],["Pegan etiqueta en funda","2"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"41"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"2.94Kg retractil Talla 30-40 (5700kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","19"],["Pega etiqueta en máster","1"],["Suben bases a banda","4"],["Operador retractiladora","1"],["Revisan bases retractiladas","2"],["Regresa mal retractil","1"],["Arman y Llenan máster","4"],["Dobla Solapas y Direccionador a selladora","1"],["D. Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"26"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"6x2Kg China Ningbo retractilado Talla 30-40 (5900kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","30"],["Rayan tapa","1"],["Pegan etiqueta en tapas","2"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"37"},{"line":"LC1","source":"FORMATO DE IMPRESION LC1","presentation":"1.96Kg Marel","rows":[["MOD CABECERA DE LÍNEA","0"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de (marel-cbp) y adv","2"],["Acomodadores de bases","4"],["MOD FINAL DE LÍNEA","32"],["Rayan tapa","1"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","1"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","2"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores de máster","2"],["Llenadores de máster","4"],["Sellador de máster","2"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":""},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"3x6Kg Talla 30-40 (6500 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","27"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"34"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"3x6Kg Agama Talla 30-40 (6500 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"2x6Kg Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"45x3.98Kg Talla 30-40 (7000 kg/h)","rows":[["MOD CABECERA DE LÍNEA","8"],["Abastecedores de LC","2"],["Cochero","2"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","22"],["Pega etiqueta en lámina (Sombrero)","1"],["Suben bases a banda","4"],["Direcciona a retractiladora","1"],["Operador de retractiladora","1"],["Empuja bases a palletizadores","2"],["Arma láminas (Sombreros)","2"],["D. Metales","1"],["Palletizadores","8"],["Liquidador P/T","1"],["Líder","1"]],"total":"30"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"2.94Kg retractil Talla 30-40 (5800 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","19"],["Pega etiqueta en máster","1"],["Suben bases a banda","4"],["Operador retractiladora","1"],["Revisan bases retractiladas","2"],["Regresa mal retractil","1"],["Arman y Llenan máster","4"],["D. Metales","1"],["Dobla Solapas y Direccionador a selladora","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"26"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"1x20Kg Talla 30-40 (6000kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","27"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","1"],["Armadores de máster","2"],["Coloca funda en el máster","1"],["Llenan y Sellan el máster","8"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"34"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"1x6Kg Agama Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","34"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","3"],["Pegan etiqueta en funda","2"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"41"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"1x6Kg Riazor Talla 30-40 (7200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","32"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","3"],["Pegan etiqueta en funda","0"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"39"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"1x6Kg retractil fenix Talla 30-40 4500 (kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","17"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisan base retractilada","2"],["Regresa mal retractilado","1"],["Pegan etiqueta en bases","2"],["Operador de retractiladora","1"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":"24"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"10x4 lbs Sunday / Panamei / Olazul Talla 30-40 (3300kg/h) Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","36"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacias","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en master","2"],["Armadores de master","1"],["Llenadores de master","2"],["Zunchador","1"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"43"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"10x4 lbs USA Sunday/Coral Talla 30-40 (3300kg/h) Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","36"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en máster","2"],["Armadores de máster","1"],["Llenadores de máster","2"],["Zunchador","1"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":""},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"1.66 Hellas Talla 30-40 (3700kg/h) Glaseo (20%)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","36"],["Sacan tarrinas de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Desmoldadores","18"],["Recoge y Desaloja tarrinas vacías","1"],["Pegan etiqueta en cajas","2"],["Pegan etiqueta en máster","2"],["Armadores de máster","1"],["Llenadores de máster","2"],["Zunchador","1"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":""},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"6x2Kg China retractilado Talla 30-40 (5900kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Rayan tapa","2"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["D.Metales","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"6x2Kg China Ningbo retractilado Talla 30-40 (5900kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","30"],["Rayan tapa","1"],["Pegan etiqueta en tapas","2"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"37"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"6x2Kg korea retractilado Talla 30-40 (5900kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","29"],["Sacan bases de panera a la banda","2"],["Reciben y desalojan paneras vacías","2"],["Colocan tapas","4"],["Rayan tapa","1"],["Pegan etiqueta en tapas","1"],["Suben bases a banda","4"],["Direccionador a retractiladora","1"],["Revisa base retractilada","1"],["Regresa mal retractilado","1"],["Operador de retractiladora","1"],["Armadores y Llenadores de masters","3"],["Dobla solapas y direcciona máster a selladora","1"],["D.Metales","1"],["Palletizadores","2"],["Pegan etiqueta en máster","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"36"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"1x6 kg S/M Unifish Talla 20-30 (7200kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","32"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","1"],["Pegan etiqueta en funda","2"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","3"],["Liquidador P/T","1"],["Líder","1"]],"total":""},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"6x2 Kg Abad/Riazor/China AB Talla 30-40 (4500 kg/h)","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","37"],["Pega etiqueta en caja","3"],["Pega etiqueta en máster","2"],["Sacan tarrinas de panera a la banda","2"],["Desmoldadores","16"],["Reciben y desalojan paneras vacías","2"],["Recoge y Desaloja tarrinas vacías","2"],["Armador de máster","1"],["Llenadores de máster","2"],["Selladores de máster","2"],["D. Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"44"},{"line":"LC2","source":"FORMATO DE IMPRESION LC2","presentation":"1X12Kg CHINA","rows":[["MOD CABECERA DE LÍNEA","7"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","2"],["MOD FINAL DE LÍNEA","35"],["Colocadores de funda en paneras","4"],["Volteadores de paneras","4"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","3"],["Llenan y Sellan el máster","10"],["D.Metales","1"],["Palletizadores","5"],["Liquidador P/T","1"],["Líder","1"]],"total":"42"},{"line":"LC3","source":"FORMATO DE IMPRESION LC3","presentation":"3x6Kg Talla 30-40 (4300 kg/h)","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","1"],["MOD FINAL DE LÍNEA","18"],["Colocadores de funda en paneras","2"],["Volteadores de paneras","1"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Armadores de máster","1"],["Llenan máster","3"],["Sellan máster","2"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"24"},{"line":"LC3","source":"FORMATO DE IMPRESION LC3","presentation":"3x6Kg Agama Talla 30-40 (4300 kg/h)","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","1"],["MOD FINAL DE LÍNEA","23"],["Colocadores de funda en paneras","2"],["Volteadores de paneras","1"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan máster","3"],["Sellan máster","4"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"29"},{"line":"LC3","source":"FORMATO DE IMPRESION LC3","presentation":"2x6Kg Talla 30-40 (4300 kg/h)","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","1"],["MOD FINAL DE LÍNEA","23"],["Colocadores de funda en paneras","2"],["Volteadores de paneras","1"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan máster","3"],["Sellan máster","4"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"29"},{"line":"LC3","source":"FORMATO DE IMPRESION LC3","presentation":"1x6Kg Agama Talla 30-40 (4300kg/h)","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","1"],["MOD FINAL DE LÍNEA","24"],["Colocadores de funda en paneras","2"],["Volteadores de paneras","1"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","2"],["Armadores de máster","2"],["Llenan máster","3"],["Sellan máster","5"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"30"},{"line":"LC3","source":"FORMATO DE IMPRESION LC3","presentation":"1x6Kg Riazor Talla 30-40 (4300kg/h)","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","1"],["MOD FINAL DE LÍNEA","22"],["Colocadores de funda en paneras","2"],["Volteadores de paneras","1"],["Reciben y desalojan paneras vacías","2"],["Pegan etiqueta en máster","2"],["Pegan etiqueta en funda","0"],["Armadores de máster","2"],["Llenan máster","3"],["Sellan máster","5"],["D.Metales","1"],["Palletizadores","2"],["Líquidador P/T","1"],["Líder","1"]],"total":"28"},{"line":"LC3","source":"FORMATO DE IMPRESION LC3","presentation":"1x6Kg retractil fenix Talla 30-40 3800 (kg/h)","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecedores de LC","2"],["Cochero","1"],["Liquidador M/P","1"],["Codificador Principal","1"],["Operador de cbp y adv","1"],["MOD FINAL DE LÍNEA","11"],["Direcciona bases a banda","1"],["Direccionador a retractiladora","1"],["Revisan base retractilada","1"],["Regresa mal retractilado","1"],["Pegan etiqueta en bases","1"],["Operador de retractiladora","1"],["D.Metales","1"],["Palletizadores","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"17"},{"line":"FRIGO-TÚNEL","source":"FRIGO-TUNEL","presentation":"Coral 4 lb","rows":[["MOD CABECERA DE LÍNEA","2"],["Liquidador de mp","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","11"],["Descargador y masterizador","6"],["Llenador Placas/Tunel","1"],["Operador dm/Zunchador","1"],["Palletizador","1"],["Liquidador P/T","1"],["Líder","1"]],"total":"13"},{"line":"FRIGO-TÚNEL","source":"FRIGO-TUNEL","presentation":"Sunday 4lb","rows":[["MOD CABECERA DE LÍNEA","2"],["Liquidador de mp","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","11"],["Descargador y masterizador","6"],["Llenador Placas/Tunel","1"],["Operador dm/Zunchador","1"],["Palletizador","1"],["Liquidador P/T","1"],["Líder","1"]],"total":"13"},{"line":"FRIGO-TÚNEL","source":"FRIGO-TUNEL","presentation":"SM 4lb","rows":[["MOD CABECERA DE LÍNEA","2"],["Liquidador de mp","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","11"],["Descargador y masterizador","6"],["Llenador Placas/Tunel","1"],["Operador dm/Zunchador","1"],["Palletizador","1"],["Liquidador P/T","1"],["Líder","1"]],"total":"13"},{"line":"FRIGO-TÚNEL","source":"FRIGO-TUNEL","presentation":"Pescanova 10x1,4Kg","rows":[["MOD CABECERA DE LÍNEA","2"],["Liquidador de mp","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","11"],["Descargador y masterizador","6"],["Llenador Placas/Tunel","1"],["Operador dm/Zunchador","1"],["Palletizador","1"],["Liquidador P/T","1"],["Líder","1"]],"total":"13"},{"line":"FRIGO-TÚNEL","source":"FRIGO-TUNEL","presentation":"Riazor 10x1,7 kg","rows":[["MOD CABECERA DE LÍNEA","2"],["Liquidador de mp","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","11"],["Descargador y masterizador","6"],["Llenador Placas/Tunel","1"],["Operador dm/Zunchador","1"],["Palletizador","1"],["Liquidador P/T","1"],["Líder","1"]],"total":"13"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"8x1 Kg Talla 30-40 (1200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","21"],["Liquidador M/P y PT","1"],["Codificador principal","1"],["Abastecedores de mp en banda","1"],["Pesadores y Envasadores","8"],["Arreglan cajas","5"],["Operador retractilado","1"],["Armadores de bases","4"],["MOD FINAL DE LÍNEA","17"],["Revisan film y material extraño","2"],["Chequeador de cajita","1"],["Operador DM","1"],["Colocan tapas a cajas","2"],["Operador de Inkjet","1"],["Compactador de caja","1"],["Codificador de master","1"],["Armador de master","1"],["Llenador de master","2"],["Sellador de master","1"],["Chequeador de peso master","1"],["Estibador","2"],["Líder","1"]],"total":"38"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"Hacendado 16x0,6kg Talla 40-50 (1008 kg/h)","rows":[["MOD CABECERA DE LÍNEA","21"],["Liquidador M/P y PT","1"],["Codificador principal","1"],["Abastecedores de mp en banda","1"],["Pesadores y Envasadores","8"],["Arreglan cajas","5"],["Operador retractilado","1"],["Armadores de bases","4"],["MOD FINAL DE LÍNEA","17"],["Revisan film y material extraño","2"],["Chequeador de cajita","1"],["Operador DM","1"],["Colocan tapas a cajas","2"],["Operador de Inkjet","1"],["Compactador de caja","1"],["Codificador de master","1"],["Armador de master","1"],["Llenador de master","2"],["Sellador de master","1"],["Chequeador de peso master","1"],["Estibador","2"],["Líder","1"]],"total":"38"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"8x0,8kg Talla 30-40 (720kg)","rows":[["MOD CABECERA DE LÍNEA","44"],["Liquidador M/P y PT","1"],["Abastece MP","1"],["Descongelado de KV","4"],["Pesadores","2"],["Envasadores de M/P en estuche","2"],["Decoradoras","30"],["Arreglo del decorado en la entrada a linea","2"],["Operador de Frigo","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","23"],["Arma estuches","2"],["Envasado en linea","5"],["Pega etiqueta en estuches","2"],["Controlador de salida de frigo","1"],["Controlador de bajada de producto en linea","1"],["Retractilado","1"],["Controlador de retractilado","2"],["D.Metales","1"],["Liberar caja de linea","1"],["Ubicar funda al estuche","1"],["Ubicar pestaña en el estuche","2"],["Masterizado y sellador","1"],["Estibadores","2"],["Líder","1"]],"total":"67"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"8x1 Kg Talla 30-40 (1200 kg/h)","rows":[["MOD CABECERA DE LÍNEA","18"],["Pesadores y envasadores","8"],["Abastecedores de mp en banda","2"],["Arreglo de producto en linea","4"],["Liquidador M/P","1"],["Codificador principal","1"],["Operador Frigo","2"],["MOD FINAL DE LÍNEA","38"],["Controlador de salida de frigo","1"],["Retira escarcha del producto","1"],["Direcciona bases al léctor de código","1"],["Operador de lector de codigo","1"],["Colocar tapas a cajas","4"],["Revisan retractilado","2"],["Operador de retractiladora","1"],["Arma master","2"],["Armadores de bases","5"],["Pega etiqueta en bases","4"],["Llenadores de master","4"],["Selladores de master","2"],["Pesador de master","2"],["Controlador de peso x master","2"],["D.Metales","2"],["Estibador","2"],["Liquidador P/T","1"],["Líder","1"]],"total":"56"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"Hacendado 10x0,6kg Talla 40-50 (1008 kg/h)","rows":[["MOD CABECERA DE LÍNEA","13"],["Liquidador M/P y PT","1"],["Operador de Frigo","1"],["Codificador principal","1"],["Armadores de bases","4"],["Pesadores y envasadores","6"],["MOD FINAL DE LÍNEA","22"],["Ingresan producto en gyro (Frigoscandia)","2"],["Reciben producto en línea","1"],["Controlan bajada de producto en línea y glaseado","1"],["Operador de lector de código y retráctiladora","1"],["Revisan y retiran plástico sobrante","2"],["Pesador de cajas","1"],["D.Metales","1"],["Colocan tapas a cajas","2"],["Armadores de máster","1"],["Llenadores de máster","2"],["Selladores de master","1"],["Anotador de pesos","1"],["Estibador","1"],["Líder","1"],["Pega etiqueta en bases","2"],["Arreglan producto en línea","2"]],"total":"35"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"8x0,8kg Talla 30-40 (720kg)","rows":[["MOD CABECERA DE LÍNEA","17"],["Descongelado de KV","4"],["Pesadores","4"],["Envasadores","4"],["Arreglo del decorado en la entrada a linea","4"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","70"],["Retractilado","2"],["Pega etiqueta en estuches","4"],["Operador de Frigo","1"],["Controlador de salida de frigo","2"],["Controlador de bajada de producto en linea","2"],["Liberar caja de linea","2"],["Envasado en linea","8"],["Controlador de retractilado","2"],["D.Metales","1"],["Masterizado y sellador","2"],["Arma bases","4"],["Ubicar pestaña en el estuche","4"],["Ubicar funda al estuche","1"],["Decoradoras","30"],["Estibadores","2"],["Estibador","1"],["Liquidador P/T","1"],["Líder","1"]],"total":"87"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"Comercial / Nova Guatemala 1x20 lbs","rows":[["MOD CABECERA DE LÍNEA","12"],["Liquidador M/P y PT","1"],["Abastecimiento de producto en línea","2"],["Abastecimiento a Frigoscandia","4"],["Despachando hielo de gaveta","3"],["Operador Frigo","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","13"],["Controlador de salida de frigo","2"],["Arma master","1"],["Pega etiqueta en master","1"],["Coloca funda en el master","1"],["Llenador de master","2"],["Pesador de master","1"],["Sellador de master","1"],["D.Metales","1"],["Palletizadores","2"],["Lider","1"]],"total":"25"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"1x9 Kg Portugal","rows":[["MOD CABECERA DE LÍNEA","18"],["Liquidador M/P y PT","1"],["Baja MP de masters a gavetillas","2"],["Descongelado de KV","4"],["Coloca hielo en el renco","1"],["Controlador de glaceado","2"],["Reciben producto x dos carriles","4"],["Abastecimiento a Frigoscandia","2"],["Codificador principal","1"],["Operador Frigo","1"],["MOD FINAL DE LÍNEA","13"],["Controlador de salida de frigo","2"],["Pesador","1"],["Sellador de master","1"],["Coloca funda en el master","1"],["Llenador de master","2"],["Pega etiqueta en master","1"],["Codificador de master","1"],["D.Metales","1"],["Palletizadores","2"],["Líder","1"]],"total":"31"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"12x0.65 Kg Taiwan","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecimiento de producto en línea","1"],["Liquidador M/P y PT","1"],["Abastecimiento a Frigoscandia","2"],["Codificador principal","1"],["Liquidador MP","1"],["MOD FINAL DE LÍNEA","21"],["Saca cajitas del pallet","2"],["Arregla el pañal y coloca cajas en banda","2"],["Cocolan glaseo al producto","2"],["Acomoda el camarón en la caja","2"],["Operador Frigo","1"],["Controlador de salida de frigo","1"],["Retira escarcha del producto","1"],["Coloca cajas en mesa","1"],["Doblan pañal de la caja","3"],["Colocan tapas a la caja","2"],["Coloca cajas en la panera","2"],["Palletizador","1"],["Líder","1"]],"total":"27"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"Comercial / Nova Guatemala 1x20 lbs","rows":[["MOD CABECERA DE LÍNEA","12"],["Liquidador M/P y PT","1"],["Abastecimiento de producto en línea","2"],["Abastecimiento a Frigoscandia","4"],["Despachando hielo de gaveta","3"],["Operador Frigo","1"],["Codificador principal","1"],["MOD FINAL DE LÍNEA","13"],["Controlador de salida de frigo","2"],["Arma master","1"],["Pega etiqueta en master","1"],["Coloca funda en el master","1"],["Llenador de master","2"],["Pesador de master","1"],["Sellador de master","1"],["D.Metales","1"],["Palletizadores","2"],["Lider","1"]],"total":"25"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"1x9 Kg Portugal","rows":[["MOD CABECERA DE LÍNEA","18"],["Liquidador M/P y PT","1"],["Baja MP de masters a gavetillas","2"],["Descongelado de KV","4"],["Coloca hielo en el renco","1"],["Controlador de glaceado","2"],["Reciben producto x dos carriles","4"],["Abastecimiento a Frigoscandia","2"],["Codificador principal","1"],["Operador Frigo","1"],["MOD FINAL DE LÍNEA","13"],["Controlador de salida de frigo","2"],["Pesador","1"],["Sellador de master","1"],["Coloca funda en el master","1"],["Llenador de master","2"],["Pega etiqueta en master","1"],["Codificador de master","1"],["D.Metales","1"],["Palletizadores","2"],["Líder","1"]],"total":"31"},{"line":"FRIGOSCANDIA","source":"FRIGOSCANDIA","presentation":"12x0.65 Kg Taiwan","rows":[["MOD CABECERA DE LÍNEA","6"],["Abastecimiento de producto en línea","1"],["Liquidador M/P y PT","1"],["Abastecimiento a Frigoscandia","2"],["Codificador principal","1"],["Liquidador MP","1"],["MOD FINAL DE LÍNEA","21"],["Saca cajitas del pallet","2"],["Arregla el pañal y coloca cajas en banda","2"],["Cocolan glaseo al producto","2"],["Acomoda el camarón en la caja","2"],["Operador Frigo","1"],["Controlador de salida de frigo","1"],["Retira escarcha del producto","1"],["Coloca cajas en mesa","1"],["Doblan pañal de la caja","3"],["Colocan tapas a la caja","2"],["Coloca cajas en la panera","2"],["Palletizador","1"],["Líder","1"]],"total":"27"},{"line":"LC1","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"1x6Kg Agama / Riazor Talla 30-40 (4500 kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Colocan fundas","4"],["Volteadores de paneras","4"],["Recibe paneras vacias","1"],["Desalojan paneras vacias","1"],["Pegan etiquetas en fundas","2"],["Pegan etiqueta en master","3"],["Arman master","3"],["Masterizadores","10"],["Estibadores","3"]],"total":"34"},{"line":"LC1","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"6x2Kg China / korea retractilado Talla 30-40 (5900kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Reciben producto","2"],["Desalojan paneras vacias","1"],["Raya tapa","2"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Revisan base retractilada","2"],["Regresa mal retractil","1"],["Pegan etiqueta al master","2"],["Arman master","2"],["Llenadores de master","4"],["Selladores de master","1"],["Estibadores","2"]],"total":"31"},{"line":"LC1","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"3x4Kg Mercadona Talla 30-40 (6000 kg/h)","rows":[["Cochero","1"],["Abastecedores de LC","2"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Revisan base retractilada","1"],["Regresan mal retractil","1"],["Pega etiqueta en master","1"],["Arma master","2"],["Llenadores de master","2"],["Selladores de master","1"],["Pesador de master","1"],["Anotador de pesos","1"],["Estibadores","2"]],"total":"20"},{"line":"LC2","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"1x6Kg Agama / Riazor Talla 30-40 (7200 kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Colocan fundas","4"],["Volteadores de paneras","4"],["Recibe paneras vacias","1"],["Desalojan paneras vacias","1"],["Pegan etiquetas en fundas","2"],["Pegan etiqueta en master","3"],["Arman master","3"],["Masterizadores","10"],["Estibadores","3"]],"total":"34"},{"line":"LC2","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"6x2Kg China / korea retractilado Talla 30-40 (5900kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Reciben producto","2"],["Desalojan paneras vacias","1"],["Raya tapa","2"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Revisan base retractilada","2"],["Regresa mal retractil","1"],["Pegan etiqueta al master","2"],["Llenadores de master","5"],["Estibadores","2"]],"total":"29"},{"line":"LC2","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"3.95Kg Talla 30-40 (7000 kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Pega etiqueta en master","1"],["Llenadores de master","4"],["Selladores de master","1"],["Estibadores","2"]],"total":"16"},{"line":"LC2","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"3x4Kg Mercadona Talla 30-40 (6500 kg/h)","rows":[["Cochero","1"],["Abastecedores de LC","2"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Revisan base retractilada","1"],["Regresan mal retractil","1"],["Pega etiqueta en master","1"],["Llenadores de master","4"],["Selladores de master","1"],["Pesador de master","1"],["Anotador de pesos","1"],["Estibadores","2"]],"total":"20"},{"line":"LC1","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"1.96Kg retractil Bloque con glaseo Talla 30-40 (5000kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Reciben producto","2"],["Raya tapa","1"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Revisan base retractilada","2"],["Regresa mal retractil","1"],["Arman master","2"],["Llenadores de master","4"],["Selladores de master","2"],["Pegan etiqueta al master","2"],["Desalojan paneras vacias","1"],["Estibadores","2"]],"total":"31"},{"line":"LC1","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"6x2 Marel Talla 50-60 (6400 kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Acomodador de bases o tarrinas","4"],["Reciben producto","2"],["Raya tapa","1"],["Colocan tapas","4"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Revisan base retractilada","2"],["Regresa mal retractil","1"],["Pegan etiqueta al master","2"],["Arman master","2"],["Llenadores de master","4"],["Selladores de master","2"],["Desalojan paneras vacias","1"],["Estibadores","2"]],"total":"35"},{"line":"LC1","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"3.95Kg Marel","rows":[["Cochero","1"],["Abastecedores LC","2"],["Acomodador de bases","4"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Pega etiqueta en master","1"],["Arman master","1"],["Llenadores de master","2"],["Selladores de master","2"],["Estibadores","2"]],"total":"20"},{"line":"LC1","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"2.94Kg Marel","rows":[["Cochero","1"],["Abastecedores LC","2"],["Arma bases","2"],["Acomodador de bases","4"],["Suben bases a banda","4"],["Direcciona al retractil","1"],["Revisan base retractilada","2"],["Regresa mal retractil","1"],["Pegan etiqueta en master","1"],["Pega etiqueta en base","2"],["Arma master","1"],["Llenadores de master","2"],["Selladores de master","2"],["Estibadores","2"]],"total":"27"},{"line":"LC3","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"1x6Kg Agama / Riazor Talla 30-40 (4300kg/h)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Colocan fundas","2"],["Volteador de panera","1"],["Recibe paneras vacias","1"],["Desaloja paneras vacias","1"],["Se lleva las paneras vacias","1"],["Pega etiqueta en funda","1"],["Pega etiqueta en master","2"],["Arma master","2"],["Llenadores de master","3"],["Selladores de master","5"],["Estibadores","3"]],"total":"25"},{"line":"LC3","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"1x20Kg Talla 30-40 (4500kg/h)","rows":[["Cochero","1"],["Abastecedores de LC","2"],["Colocan fundas","2"],["Volteador de paneras","1"],["Baja paneras de la banda","1"],["Desaloja paneras vacias","1"],["Se lleva las paneras vacias","1"],["Pega etiqueta en master","1"],["Arma master","1"],["Llenadores de master","3"],["Selladores de master","4"],["Estibadores","2"]],"total":"20"},{"line":"LC3","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"6x2Kg China retractilado Talla 30-40 (5500kg/h)","rows":[["Cochero","1"],["Abastecedores de LC","2"],["Sacan bases de panera","2"],["Volteador de panera","1"],["Recibe paneras vacias","1"],["Desaloja paneras vacias","1"],["Se lleva las paneras vacias","1"],["Direcciona al retractil","1"],["Revisan bases retractiladas","2"],["Pegan etiquetas a tapas","3"],["Colocan tapas","4"],["Pega etiquetas a master","2"],["Llenadores de master","4"],["Estibadores","2"]],"total":"27"},{"line":"LC3","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"3x4 Kg Mercadona Talla 30-40 (5500)","rows":[["Cochero","1"],["Abastecedores LC","2"],["Direcciona bases a banda","2"],["Direcciona al retractil","1"],["Revisan base retractilada","1"],["Regresan mal retractil","1"],["Llenadores de master","3"],["Pega etiqueta en master","1"],["Pesador de master","1"],["Anotador de pesos","1"],["Estibadores","2"]],"total":"16"},{"line":"LC3","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"3x3.95 Kg Talla 30-40 (4500)","rows":[["Cochero","1"],["Abastecedores de LC","2"],["Acomodadores de base","2"],["Direcciona al retractil","1"],["Pega etiqueta en master","1"],["Llenadores de master","3"],["Estibadores","2"]],"total":"12"},{"line":"FRIGOSCANDIA","source":"ESTÁNDAR CONGELACIÓN A4","presentation":"10x0.95 Kg Fujiang","rows":[["Abastecimiento en banda","2"],["Cochero","1"],["Entrada a Frigo","2"],["Bajada de producto en banda","7"],["Llenadores de master","2"],["Selladores de master","1"],["Estibadores","2"]],"total":"17"}];
+
+function escaparHTMLConsultaMOD(valor){
+    return String(valor ?? "").replace(/[&<>"']/g, function(c){
+        return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+}
+
+const ESTANDARES_CONSULTA_CLASIFICADORA = {
+    1:{bandas:2,cabecera:21,final:4,total:25,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","2"],["Inspeccionan defectos","2"],
+        ["Abastecedor de gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","1"],
+        ["Retiran defectos en banda Hopper (NF)","1"],["Retiran M.E. en banda Hopper (F)","2"],
+        ["Retiran M.E. en banda Hopper (NF)","1"],["Llenadores (F)","2"],["Llenadores (NF)","1"],
+        ["Pesadores (F)","3"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    2:{bandas:2,cabecera:21,final:4,total:25,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","2"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","2"],
+        ["Retiran defectos en banda Hopper (NF)","1"],["Retiran M.E. en banda Hopper (F)","2"],
+        ["Retiran M.E. en banda Hopper (NF)","1"],["Llenadores (F)","1"],["Llenadores (NF)","1"],
+        ["Pesadores (F)","3"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    3:{bandas:2,cabecera:21,final:4,total:25,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","2"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","2"],
+        ["Retiran defectos en banda Hopper (NF)","1"],["Retiran M.E. en banda Hopper (F)","2"],
+        ["Retiran M.E. en banda Hopper (NF)","1"],["Llenadores (F)","1"],["Llenadores (NF)","1"],
+        ["Pesadores (F)","3"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    4:{bandas:3,cabecera:23,final:4,total:27,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","2"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","2"],
+        ["Retiran defectos en banda Hopper (NF)","2"],["Retiran M.E. en banda Hopper (F)","2"],
+        ["Retiran M.E. en banda Hopper (NF)","2"],["Llenadores (F)","2"],["Llenadores (NF)","1"],
+        ["Pesadores (F)","2"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    5:{bandas:2,cabecera:20,final:4,total:24,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","2"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","1"],
+        ["Retiran defectos en banda Hopper (NF)","1"],["Retiran M.E. en mesa (F)","2"],
+        ["Retiran M.E. en mesa (NF)","1"],["Llenadores (F)","1"],["Llenadores (NF)","2"],
+        ["Pesadores (F)","2"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    6:{bandas:3,cabecera:23,final:4,total:27,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","2"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","2"],
+        ["Retiran defectos en banda Hopper (NF)","2"],["Retiran M.E. en banda Hopper (F)","2"],
+        ["Retiran M.E. en banda Hopper (NF)","2"],["Llenadores (F)","1"],["Llenadores (NF)","2"],
+        ["Pesadores (F)","2"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    7:{bandas:2,cabecera:23,final:4,total:27,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","4"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","2"],
+        ["Retiran defectos en banda Hopper (NF)","1"],["Retiran M.E. en mesa (F)","3"],
+        ["Retiran M.E. en mesa (NF)","1"],["Llenadores (F)","1"],["Llenadores (NF)","1"],
+        ["Pesadores (F)","2"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    8:{bandas:2,cabecera:23,final:4,total:27,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","4"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","2"],
+        ["Retiran defectos en banda Hopper (NF)","1"],["Retiran M.E. en mesa (F)","3"],
+        ["Retiran M.E. en mesa (NF)","1"],["Llenadores (F)","1"],["Llenadores (NF)","1"],
+        ["Pesadores (F)","2"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]},
+    9:{bandas:2,cabecera:23,final:4,total:27,funciones:[
+        ["Tolvero","1"],["Inspeccionan material extraño","4"],["Inspeccionan defectos","2"],
+        ["Abastece gavetas/paneras/bases","1"],["Retiran defectos en banda Hopper (F)","2"],
+        ["Retiran defectos en banda Hopper (NF)","1"],["Retiran M.E. en mesa (F)","3"],
+        ["Retiran M.E. en mesa (NF)","1"],["Llenadores (F)","1"],["Llenadores (NF)","1"],
+        ["Pesadores (F)","2"],["Pesadores (NF)","1"],["Estibadores (F)","2"],["Estibadores (NF)","1"]
+    ]}
+};
+
+function obtenerEstandaresConsultaMOD(linea){
+    const estandaresLinea=ESTANDARES_CONSULTA_MOD.filter(x=>x.line===linea);
+    if(estandaresLinea.length)return estandaresLinea;
+
+    const lineaCongelacion=linea.match(/^LC([1-4])$/);
+    if(lineaCongelacion){
+        const presentaciones=PRESENTACIONES_POR_LC[linea]||[];
+        return presentaciones.map(function(item){
+            return {
+                line:linea,
+                presentation:item.nombre,
+                rows:[
+                    ["Estándar MOD",item.mod+" personas"],
+                    ["Estándar de producción",item.teorico?formatearNumero(item.teorico)+" Kg/h":"No registrado"]
+                ],
+                total:item.mod+" personas",
+                totalLabel:"Total estándar MOD"
+            };
+        });
+    }
+
+    if(linea==="RECEPCIÓN"){
+        return [
+            {
+                line:linea,
+                presentation:"PESCA VIVA",
+                rows:[
+                    ["Digitador de guías de la MP al sistema","1"],
+                    ["Corta y coloca las guías del Lote en el Bin","1"],
+                    ["Control de recepción y orden de bines","1"],
+                    ["Recoge camarón de las plataformas","1"],
+                    ["Control de toma de oxígeno","2"],
+                    ["Levantamiento de mallas","2"],
+                    ["Retiro de Mallas y Aros","1"],
+                    ["Muestrea el camarón de los bines (supervivencia y organolépticos)","2"],
+                    ["Registra la información del producto en la hoja de identificación","2"],
+                    ["Transportan las muestras a calidad","2"],
+                    ["Retiro de agua del bin","1"],
+                    ["Coloca hielo líquido y agua helada a los bines","1"],
+                    ["Deposita el hielo placa de las gavetas en el bin","2"],
+                    ["Prepara metabisulfito en el cuarto de sistema automático","1"],
+                    ["Dosificador de Metabisulfito a tachos","1"],
+                    ["Dosifica la solución de metabisulfito en el bin","1"],
+                    ["Recircula con una pala la solución de metabisulfito en el bin","1"],
+                    ["Controla tiempos de escurrido de los bines","2"],
+                    ["Escurre el tratamiento de los bines","1"],
+                    ["Retiran tapas del bin (Previo abastecimiento en la tolva)","3"],
+                    ["Abastecedor de MP en recepción","1"],
+                    ["Operadores de montacarga","2"],
+                    ["Operadores de visión artificial","2"],
+                    ["Retiran material extraño en banda","2"],
+                    ["Bodeguero Interno de recepción de MP","1"],
+                    ["Líder","1"]
+                ],
+                total:"38"
+            },
+            {
+                line:linea,
+                presentation:"TRADICIONAL",
+                rows:[
+                    ["Digitador de guías de la MP al sistema","1"],
+                    ["Corta y coloca las guías del Lote en el Bin","1"],
+                    ["Control de recepción y orden de bines","1"],
+                    ["Recoge camarón de las plataformas","1"],
+                    ["Cortador de sellos de alambre","2"],
+                    ["Registra y verifica la información de los sellos de alambre","1"],
+                    ["Muestrea el camarón de los bines","2"],
+                    ["Registra la información del producto en la hoja de identificación","2"],
+                    ["Transportan las muestras a calidad","2"],
+                    ["Controla tiempos de escurrido de los bines","2"],
+                    ["Escurre el tratamiento de los bines","1"],
+                    ["Coloca hielo líquido a los bines","1"],
+                    ["Prepara metabisulfito en el cuarto de sistema automático","1"],
+                    ["Distribuye metabisulfito a las tolvas","1"],
+                    ["Retiran tapas del bin (Previo abastecimiento en la tolva)","3"],
+                    ["Abastecedor de MP en recepción","1"],
+                    ["Operadores de montacarga","2"],
+                    ["Operadores de visión artificial","2"],
+                    ["Retiran material extraño en banda","2"],
+                    ["Bodeguero Interno de recepción de MP","1"],
+                    ["Líder","1"]
+                ],
+                total:"31"
+            }
+        ];
+    }
+
+    if(linea==="DESCABEZADO"){
+        return [
+            {
+                line:linea,
+                presentation:"1 MÓDULO DE DESCABEZADO",
+                rows:[
+                    ["Tolvero de abastecimiento de MP","1"],
+                    ["Tolvero de Banda","1"],
+                    ["Personal de descabezado","50"],
+                    ["Pesador de cabeza","1"],
+                    ["Registra el peso de las cabezas","1"],
+                    ["Baja cola en gaveta","1"],
+                    ["Pesador de gaveta","1"],
+                    ["Coloca hielo en gavetas","1"],
+                    ["Cochero","1"],
+                    ["Limpieza","1"],
+                    ["Registra asistencia","1"],
+                    ["Liquidador de materia prima","1"],
+                    ["Retira sobrante de cabezas en banda","2"],
+                    ["Analista de procesamiento de cabezas","1"],
+                    ["Líder","1"]
+                ],
+                total:"65"
+            },
+            {
+                line:linea,
+                presentation:"AMBOS MÓDULOS DE DESCABEZADO",
+                rows:[
+                    ["Tolvero de abastecimiento de MP","2"],
+                    ["Tolvero de Banda","2"],
+                    ["Personal de descabezado","100"],
+                    ["Pesador de cabeza","1"],
+                    ["Registra el peso de las cabezas","1"],
+                    ["Baja cola en gaveta","2"],
+                    ["Pesador de gaveta","2"],
+                    ["Coloca hielo en gaveta","2"],
+                    ["Cochero","1"],
+                    ["Limpieza","1"],
+                    ["Registra asistencia","1"],
+                    ["Liquidador de materia prima","1"],
+                    ["Retira sobrante de cabezas en banda","4"],
+                    ["Analista de procesamiento de cabezas","1"],
+                    ["Líder","1"]
+                ],
+                total:"122"
+            }
+        ];
+    }
+
+    const clasif=linea.match(/^CLASIFICADORA ([1-9])$/);
+    if(clasif){
+        const numero=Number(clasif[1]);
+        const estandar=ESTANDARES_CONSULTA_CLASIFICADORA[numero];
+        const presentaciones=[{
+            line:linea,
+            presentation:"MOD ("+estandar.bandas+" Bandas de Clasificación)",
+            rows:[
+                ["MOD CABECERA DE LÍNEA",String(estandar.cabecera)],
+                ...estandar.funciones,
+                ["MOD FINAL DE LÍNEA",String(estandar.final)],
+                ["Líder","1"],
+                ["Anotador de rendimiento","1"],
+                ["Liquidador mp","1"],
+                ["Codificador","1"]
+            ],
+            total:String(estandar.total)
+        }];
+        const vistas=new Set();
+        ESTANDARES_CLASIF.forEach(function(item){
+            const clave=[item.p,item.e,item.w].join("|");
+            if(vistas.has(clave))return;
+            vistas.add(clave);
+            const kgHora=Number(item.v[numero-1]||0);
+            presentaciones.push({
+                line:linea,
+                presentation:item.p+" / "+item.e+" / "+String(item.w).replace(".",",")+" Kg",
+                rows:[
+                    ["Estándar MOD",estandar.total+" personas"],
+                    ["Estándar de producción",kgHora?formatearNumero(kgHora)+" Kg/h":"No registrado"]
+                ],
+                total:estandar.total+" personas",
+                totalLabel:"Total estándar MOD"
+            });
+        });
+        return presentaciones;
+    }
+
+    const retrabajo=linea.match(/^RETRABAJO — (REETIQUETEO|REEMPAQUE|REPROCESO)$/);
+    if(retrabajo){
+        return (PRESENTACIONES_RETRABAJO[retrabajo[1]]||[])
+            .map(function(item,index){
+                if(!Number(item.mod))return null;
+                const detalle=ESTANDARES_RETRABAJO_CONSULTA[retrabajo[1]]?.[index];
+                return {
+                    line:linea,
+                    presentation:item.nombre,
+                    rows:[
+                        ...(detalle?.rows||[["Estándar MOD",item.mod+" personas"]]),
+                        ["Estándar de producción",item.estandar||"No registrado"]
+                    ],
+                    total:detalle?.total||String(item.mod),
+                    totalLabel:"Total equipo"
+                };
+            })
+            .filter(Boolean);
+    }
+
+    return [];
+}
+
+function abrirConsultaEstandarMOD(){
+    const panel=document.getElementById("consultaEstandarMOD");
+    panel.style.display="block";
+    const linea=document.getElementById("consultaLineaMOD");
+    poblarLineasConsultaMOD();
+    const nombresArea={
+        CONGELACION:"CONGELACIÓN",
+        CLASIFICADORA:"CLASIFICADORA",
+        RECEPCION:"RECEPCIÓN",
+        RETRABAJO:"RETRABAJO",
+        DESCABEZADO:"DESCABEZADO"
+    };
+    document.getElementById("tituloConsultaEstandarMOD").textContent=
+        "📋 Consulta de estándares MOD — "+(nombresArea[areaActual]||"Área no seleccionada");
+    const equipo=(document.getElementById("equipo")?.value||auditoria.equipo||"").toUpperCase();
+    let sugerida="";
+    if(areaActual==="CONGELACION"){
+        sugerida=equipo==="FRIGO-TUNEL"||equipo==="FRIGO TUNEL"?"FRIGO-TÚNEL":
+            equipo==="FRIGOESCANDIA"?"FRIGOSCANDIA":equipo;
+    }else if(areaActual==="CLASIFICADORA"&&/^CLASIFICADORA [1-9]$/.test(equipo)){
+        sugerida=equipo;
+    }else if(areaActual==="RECEPCION"){
+        sugerida="RECEPCIÓN";
+    }else if(areaActual==="DESCABEZADO"){
+        sugerida="DESCABEZADO";
+    }else if(areaActual==="RETRABAJO"){
+        const subproceso=document.getElementById("subprocesoRetrabajo")?.value||"";
+        sugerida=subproceso?"RETRABAJO — "+subproceso:"RETRABAJO — REETIQUETEO";
+    }
+    if(sugerida&&[...linea.options].some(op=>op.value===sugerida))linea.value=sugerida;
+    cargarPresentacionesConsultaMOD();
+    panel.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function cerrarConsultaEstandarMOD(){
+    document.getElementById("consultaEstandarMOD").style.display="none";
+}
+
+function poblarLineasConsultaMOD(){
+    const linea=document.getElementById("consultaLineaMOD");
+    const lineasPorArea={
+        CONGELACION:[
+            ...new Set(ESTANDARES_CONSULTA_MOD.map(item=>item.line)),
+            "LC4"
+        ],
+        CLASIFICADORA:Array.from({length:9},(_,i)=>"CLASIFICADORA "+(i+1)),
+        RECEPCION:["RECEPCIÓN"],
+        RETRABAJO:["RETRABAJO — REETIQUETEO","RETRABAJO — REEMPAQUE","RETRABAJO — REPROCESO"],
+        DESCABEZADO:["DESCABEZADO"]
+    };
+    const opciones=lineasPorArea[areaActual]||[];
+    linea.innerHTML='<option value="">Seleccione línea, equipo o proceso...</option>';
+    opciones.forEach(function(nombre){
+        const op=document.createElement("option");
+        op.value=nombre;
+        op.textContent=nombre;
+        linea.appendChild(op);
+    });
+    linea.disabled=opciones.length===0;
+    if(!opciones.length){
+        document.getElementById("resultadoConsultaMOD").innerHTML=
+            '<p style="color:#75848b;text-align:center;padding:18px;">No hay estándares de consulta configurados para esta área.</p>';
+    }
+}
+
+function cargarPresentacionesConsultaMOD(){
+    const linea=document.getElementById("consultaLineaMOD").value;
+    const select=document.getElementById("consultaPresentacionMOD");
+    select.innerHTML='<option value="">Seleccione una presentación...</option>';
+    const disponibles=obtenerEstandaresConsultaMOD(linea);
+    disponibles.forEach(function(item,index){
+        const op=document.createElement("option");
+        op.value=String(index);
+        op.textContent=item.presentation;
+        select.appendChild(op);
+    });
+    select.disabled=disponibles.length===0;
+    mostrarTablaConsultaMOD();
+}
+
+function mostrarTablaConsultaMOD(){
+    const linea=document.getElementById("consultaLineaMOD").value;
+    const select=document.getElementById("consultaPresentacionMOD");
+    const resultado=document.getElementById("resultadoConsultaMOD");
+    const disponibles=obtenerEstandaresConsultaMOD(linea);
+    const item=select.value===""?null:disponibles[Number(select.value)];
+    if(!item){
+        resultado.innerHTML='<p style="color:#75848b;text-align:center;padding:18px;">Seleccione una presentación para observar el estándar.</p>';
+        return;
+    }
+    let filas=item.rows.map(function(f){
+        return '<tr><td>'+escaparHTMLConsultaMOD(f[0])+'</td><td>'+escaparHTMLConsultaMOD(f[1])+'</td></tr>';
+    }).join("");
+    resultado.innerHTML=
+        '<div class="consulta-presentacion">PRESENTACIÓN '+escaparHTMLConsultaMOD(item.presentation)+'</div>'+
+        '<div class="consulta-tabla"><table><thead><tr><th>Función</th><th>#</th></tr></thead>'+
+        '<tbody>'+filas+'<tr class="consulta-total"><td>'+escaparHTMLConsultaMOD(item.totalLabel||"Total equipo")+'</td><td>'+escaparHTMLConsultaMOD(item.total||"—")+'</td></tr></tbody></table></div>';
+}
+
 </script>
 </body>
 
