@@ -890,8 +890,12 @@ td select {
 .consulta-estandar-mod th{background:#00566d;color:#fff;padding:11px;text-align:left;}
 .consulta-estandar-mod td{padding:9px 11px;border:1px solid #d8e2e6;background:#fff;}
 .consulta-estandar-mod td:last-child,.consulta-estandar-mod th:last-child{text-align:center;width:90px;}
+.consulta-estandar-mod .consulta-conteo{width:110px;min-width:90px;padding:8px;text-align:center;}
+.consulta-estandar-mod .consulta-conteo input{width:82px;min-width:70px;padding:7px;text-align:center;}
 .consulta-estandar-mod .consulta-presentacion{background:#eaf4f7;color:#004b63;font-weight:bold;padding:13px;border-radius:8px;margin-bottom:12px;}
 .consulta-estandar-mod .consulta-total td{font-weight:bold;background:#eef8fa;color:#004b63;}
+.consulta-estandar-mod .consulta-suma{margin-top:12px;padding:12px 14px;border-radius:8px;background:#eaf4f7;color:#004b63;font-weight:bold;}
+.consulta-estandar-mod .consulta-suma-alerta{background:#fff4e5;color:#835200;}
 .consulta-estandar-mod .consulta-nota{font-size:12px;color:#687780;margin-top:10px;}
 @media(max-width:700px){.consulta-estandar-mod{padding:14px}.consulta-estandar-mod .consulta-filtros{grid-template-columns:1fr}.consulta-estandar-mod table{min-width:0}}
 
@@ -1329,7 +1333,7 @@ td select {
 <div class="titulo">
 
     <h1>
-        RENDIMIENTO
+        RENDIMIENTO 
     </h1>
 
     <p>
@@ -7760,7 +7764,7 @@ function obtenerEstandaresConsultaMOD(linea){
     if(clasif){
         const numero=Number(clasif[1]);
         const estandar=ESTANDARES_CONSULTA_CLASIFICADORA[numero];
-        const presentaciones=[{
+        return [{
             line:linea,
             presentation:"MOD ("+estandar.bandas+" Bandas de Clasificación)",
             rows:[
@@ -7774,24 +7778,6 @@ function obtenerEstandaresConsultaMOD(linea){
             ],
             total:String(estandar.total)
         }];
-        const vistas=new Set();
-        ESTANDARES_CLASIF.forEach(function(item){
-            const clave=[item.p,item.e,item.w].join("|");
-            if(vistas.has(clave))return;
-            vistas.add(clave);
-            const kgHora=Number(item.v[numero-1]||0);
-            presentaciones.push({
-                line:linea,
-                presentation:item.p+" / "+item.e+" / "+String(item.w).replace(".",",")+" Kg",
-                rows:[
-                    ["Estándar MOD",estandar.total+" personas"],
-                    ["Estándar de producción",kgHora?formatearNumero(kgHora)+" Kg/h":"No registrado"]
-                ],
-                total:estandar.total+" personas",
-                totalLabel:"Total estándar MOD"
-            });
-        });
-        return presentaciones;
     }
 
     const retrabajo=linea.match(/^RETRABAJO — (REETIQUETEO|REEMPAQUE|REPROCESO)$/);
@@ -7870,7 +7856,7 @@ function poblarLineasConsultaMOD(){
     const opciones=lineasPorArea[areaActual]||[];
     linea.innerHTML='<option value="">Seleccione línea, equipo o proceso...</option>';
     opciones.forEach(function(nombre){
-        const op=document.createElement("option");
+        const op=document.createElement("option");  
         op.value=nombre;
         op.textContent=nombre;
         linea.appendChild(op);
@@ -7908,12 +7894,54 @@ function mostrarTablaConsultaMOD(){
         return;
     }
     let filas=item.rows.map(function(f){
-        return '<tr><td>'+escaparHTMLConsultaMOD(f[0])+'</td><td>'+escaparHTMLConsultaMOD(f[1])+'</td></tr>';
+        const funcion=String(f[0]||"");
+        const esSubtotal=/^MOD (CABECERA|FINAL)\b/i.test(funcion)||/^ESTÁNDAR\b/i.test(funcion);
+        const entrada=esSubtotal
+            ? '<td class="consulta-conteo">—</td>'
+            : '<td class="consulta-conteo"><input type="number" min="0" step="1" value="" aria-label="Cantidad observada: '+escaparHTMLConsultaMOD(funcion)+'" oninput="actualizarSumaConsultaMOD()"></td>';
+        return '<tr><td>'+escaparHTMLConsultaMOD(funcion)+'</td><td>'+escaparHTMLConsultaMOD(f[1])+'</td>'+entrada+'</tr>';
     }).join("");
     resultado.innerHTML=
         '<div class="consulta-presentacion">PRESENTACIÓN '+escaparHTMLConsultaMOD(item.presentation)+'</div>'+
-        '<div class="consulta-tabla"><table><thead><tr><th>Función</th><th>#</th></tr></thead>'+
-        '<tbody>'+filas+'<tr class="consulta-total"><td>'+escaparHTMLConsultaMOD(item.totalLabel||"Total equipo")+'</td><td>'+escaparHTMLConsultaMOD(item.total||"—")+'</td></tr></tbody></table></div>';
+        '<div class="consulta-tabla"><table><thead><tr><th>Función</th><th>Estándar (#)</th><th>Observado (#)</th></tr></thead>'+
+        '<tbody>'+filas+
+        '<tr class="consulta-total"><td>'+escaparHTMLConsultaMOD(item.totalLabel||"Total equipo")+'</td><td>'+escaparHTMLConsultaMOD(item.total||"—")+'</td><td id="totalObservadoConsultaMOD">0</td></tr>'+
+        '</tbody></table></div>'+
+        '<div id="comparacionConsultaMOD" class="consulta-suma" aria-live="polite"></div>';
+    actualizarSumaConsultaMOD();
+}
+
+function actualizarSumaConsultaMOD(){
+    const resultado=document.getElementById("resultadoConsultaMOD");
+    const totalObservado=resultado.querySelector("#totalObservadoConsultaMOD");
+    const comparacion=resultado.querySelector("#comparacionConsultaMOD");
+    if(!totalObservado||!comparacion)return;
+    let suma=0;
+    resultado.querySelectorAll(".consulta-conteo input").forEach(function(input){
+        if(input.value!=="")suma+=Number(input.value);
+    });
+    totalObservado.textContent=String(suma);
+    const linea=document.getElementById("consultaLineaMOD").value;
+    const presentacion=document.getElementById("consultaPresentacionMOD");
+    const item=obtenerEstandaresConsultaMOD(linea)[Number(presentacion.value)];
+    const textoEstandar=String(item?.total??"").replace(/[^\d,.-]/g,"").replace(",",".");
+    const valorEstandar=textoEstandar?Number(textoEstandar):NaN;
+    if(!Number.isFinite(valorEstandar)){
+        comparacion.textContent="Total observado: "+suma+" personas.";
+        comparacion.className="consulta-suma";
+        return;
+    }
+    const diferencia=suma-valorEstandar;
+    if(diferencia===0){
+        comparacion.textContent="Total observado: "+suma+" personas. Coincide con el estándar.";
+        comparacion.className="consulta-suma";
+    }else if(diferencia<0){
+        comparacion.textContent="Total observado: "+suma+" personas. Faltan "+Math.abs(diferencia)+" para alcanzar el estándar de "+valorEstandar+".";
+        comparacion.className="consulta-suma consulta-suma-alerta";
+    }else{
+        comparacion.textContent="Total observado: "+suma+" personas. Exceso de "+diferencia+" sobre el estándar de "+valorEstandar+".";
+        comparacion.className="consulta-suma consulta-suma-alerta";
+    }
 }
 
 </script>
