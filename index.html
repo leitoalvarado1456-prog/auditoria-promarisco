@@ -1333,7 +1333,7 @@ td select {
 <div class="titulo">
 
     <h1>
-        RENDIMIENTO 
+        RENDIMIENTO
     </h1>
 
     <p>
@@ -2078,7 +2078,9 @@ let auditoria = {
 
     mod: [],
 
-    observacionesMOD: ""
+    observacionesMOD: "",
+
+    consultaMOD: null
 
 };
 
@@ -4292,6 +4294,8 @@ async function exportarExcel() {
 
         [
 
+            "Fecha y hora de registro",
+
             "Línea",
 
             "Presentación",
@@ -4333,6 +4337,8 @@ async function exportarExcel() {
         function(item) {
 
             datosMOD.push([
+
+                auditoria.fechaRegistro || "",
 
                 item.linea || "",
 
@@ -4381,6 +4387,40 @@ async function exportarExcel() {
             datosMOD
         );
 
+    let wsConsultaMOD=null;
+    if(auditoria.consultaMOD){
+        const consulta=auditoria.consultaMOD;
+        const filasConsulta=[
+            ["Fecha y hora de registro","Área","Equipo","Línea / proceso","Presentación","Función","Estándar (#)","Observado (#)"]
+        ];
+        consulta.rows.forEach(function(fila){
+            filasConsulta.push([
+                auditoria.fechaRegistro||"",
+                consulta.area||"",
+                consulta.equipo||"",
+                consulta.linea||"",
+                consulta.presentacion||"",
+                fila.funcion||"",
+                fila.estandar??"",
+                fila.observado??""
+            ]);
+        });
+        filasConsulta.push([
+            auditoria.fechaRegistro||"",
+            consulta.area||"",
+            consulta.equipo||"",
+            consulta.linea||"",
+            consulta.presentacion||"",
+            consulta.totalLabel||"Total equipo",
+            consulta.totalEstandar??"",
+            consulta.totalObservado??0
+        ]);
+        wsConsultaMOD=XLSX.utils.aoa_to_sheet(filasConsulta);
+        wsConsultaMOD["!cols"]=[
+            {wch:24},{wch:18},{wch:22},{wch:26},{wch:42},{wch:48},{wch:18},{wch:18}
+        ];
+    }
+
 
     /*
     =========================================================
@@ -4415,6 +4455,8 @@ async function exportarExcel() {
 
 
     wsMOD["!cols"] = [
+
+        {wch:24},
 
         {
             wch: 20
@@ -4509,6 +4551,13 @@ async function exportarExcel() {
 
     );
 
+    if(wsConsultaMOD){
+        XLSX.utils.book_append_sheet(
+            libro,
+            wsConsultaMOD,
+            "Consulta estándar MOD"
+        );
+    }
 
     /*
     =========================================================
@@ -5029,6 +5078,8 @@ async function exportarHistorialExcel() {
 
             "ID Auditoría",
 
+            "Fecha y hora de registro",
+
             "Día",
 
             "Área",
@@ -5069,6 +5120,8 @@ async function exportarHistorialExcel() {
                         modHistorialDatos.push([
 
                             aud.id || "",
+
+                            aud.fechaRegistro || "",
 
                             aud.dia || "",
 
@@ -5117,6 +5170,7 @@ async function exportarHistorialExcel() {
     wsMODHistorial["!cols"] = [
 
         {wch:18},
+        {wch:24},
         {wch:14},
         {wch:20},
         {wch:22},
@@ -5131,6 +5185,57 @@ async function exportarHistorialExcel() {
         {wch:45}
 
     ];
+
+    const consultaMODHistorialDatos=[[
+        "ID Auditoría",
+        "Fecha y hora de registro",
+        "Día",
+        "Área",
+        "Equipo",
+        "Línea / proceso",
+        "Presentación",
+        "Función",
+        "Estándar (#)",
+        "Observado (#)"
+    ]];
+    historial.forEach(function(aud){
+        const consulta=aud.consultaMOD;
+        if(!consulta)return;
+        (consulta.rows||[]).forEach(function(fila){
+            consultaMODHistorialDatos.push([
+                aud.id||"",
+                aud.fechaRegistro||"",
+                aud.dia||"",
+                consulta.area||aud.area||"",
+                consulta.equipo||aud.equipo||"",
+                consulta.linea||"",
+                consulta.presentacion||"",
+                fila.funcion||"",
+                fila.estandar??"",
+                fila.observado??""
+            ]);
+        });
+        consultaMODHistorialDatos.push([
+            aud.id||"",
+            aud.fechaRegistro||"",
+            aud.dia||"",
+            consulta.area||aud.area||"",
+            consulta.equipo||aud.equipo||"",
+            consulta.linea||"",
+            consulta.presentacion||"",
+            consulta.totalLabel||"Total equipo",
+            consulta.totalEstandar??"",
+            consulta.totalObservado??0
+        ]);
+    });
+    const wsConsultaMODHistorial=consultaMODHistorialDatos.length>1
+        ?XLSX.utils.aoa_to_sheet(consultaMODHistorialDatos)
+        :null;
+    if(wsConsultaMODHistorial){
+        wsConsultaMODHistorial["!cols"]=[
+            {wch:18},{wch:24},{wch:14},{wch:20},{wch:22},{wch:26},{wch:42},{wch:48},{wch:18},{wch:18}
+        ];
+    }
 
 
     /*
@@ -5185,6 +5290,14 @@ async function exportarHistorialExcel() {
         "Cumplimiento MOD"
 
     );
+
+    if(wsConsultaMODHistorial){
+        XLSX.utils.book_append_sheet(
+            libro,
+            wsConsultaMODHistorial,
+            "Consulta estándar MOD"
+        );
+    }
 
 
     /*
@@ -5245,6 +5358,13 @@ async function borrarHistorial() {
 
         return;
 
+    }
+
+    const contrasena=prompt("Ingrese la contraseña de administrador para borrar el historial:");
+    if(contrasena===null)return;
+    if(contrasena.trim()!=="MC26"){
+        alert("Contraseña incorrecta. No se borró el historial.");
+        return;
     }
 
 
@@ -7539,6 +7659,7 @@ finalizar = function(){
     auditoria.fechaRegistro=new Date().toLocaleString("es-EC");
     auditoria.mod=mod;
     auditoria.observacionesMOD=(document.getElementById("observacionesMOD")?.value||"").trim();
+    auditoria.consultaMOD=obtenerConsultaMODParaAuditoria();
     if(areaActual!=="RECEPCION"){
         auditoria.preguntas=[];
         for(let i=1;i<=7;i++){const r=document.querySelector('input[name="p'+i+'"]:checked');auditoria.preguntas.push({numero:i,respuesta:r?r.value:""});}
@@ -7942,6 +8063,40 @@ function actualizarSumaConsultaMOD(){
         comparacion.textContent="Total observado: "+suma+" personas. Exceso de "+diferencia+" sobre el estándar de "+valorEstandar+".";
         comparacion.className="consulta-suma consulta-suma-alerta";
     }
+}
+
+function obtenerConsultaMODParaAuditoria(){
+    const linea=document.getElementById("consultaLineaMOD")?.value||"";
+    const select=document.getElementById("consultaPresentacionMOD");
+    const resultado=document.getElementById("resultadoConsultaMOD");
+    if(!linea||!select||select.value===""||!resultado.querySelector("#totalObservadoConsultaMOD"))return null;
+    const item=obtenerEstandaresConsultaMOD(linea)[Number(select.value)];
+    if(!item)return null;
+    const entradas=[...resultado.querySelectorAll(".consulta-conteo input")];
+    let indiceEntrada=0;
+    const rows=item.rows.map(function(fila){
+        const funcion=String(fila[0]||"");
+        const esSubtotal=/^MOD (CABECERA|FINAL)\b/i.test(funcion)||/^ESTÁNDAR\b/i.test(funcion);
+        const observado=esSubtotal?"":(entradas[indiceEntrada++]?.value??"");
+        return {
+            funcion,
+            estandar:String(fila[1]??""),
+            observado
+        };
+    });
+    const textoTotal=String(item.total??"").replace(/[^\d,.-]/g,"").replace(",",".");
+    const numeroTotal=textoTotal?Number(textoTotal):null;
+    return {
+        area:areaActual,
+        equipo:auditoria.equipo||"",
+        linea,
+        presentacion:item.presentation,
+        rows,
+        totalLabel:item.totalLabel||"Total equipo",
+        totalEstandar:Number.isFinite(numeroTotal)?numeroTotal:String(item.total??""),
+        totalObservado:Number(resultado.querySelector("#totalObservadoConsultaMOD").textContent||0),
+        comparacion:resultado.querySelector("#comparacionConsultaMOD")?.textContent||""
+    };
 }
 
 </script>
