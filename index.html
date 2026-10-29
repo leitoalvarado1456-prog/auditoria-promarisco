@@ -25,7 +25,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;                                                                                                                                                                              
 }
 
 body {
@@ -5462,7 +5462,6 @@ async function borrarHistorial() {
 
 }
 
-
 /* =========================================================
    NUEVA AUDITORIA
 ========================================================= */
@@ -7748,6 +7747,65 @@ const ESTANDARES_CONSULTA_CLASIFICADORA = {
     ]}
 };
 
+const VARIANTES_MOD_CLASIFICADORA = [
+    {
+        nombre:"C1",
+        clasificadoras:[
+            [2,21,"Hopper",1,1,2,1,2,1,3,1,2,1],
+            [2,21,"Hopper",2,1,2,1,1,1,3,1,2,1],
+            [2,21,"Hopper",2,1,2,1,1,1,3,1,2,1],
+            [3,23,"Hopper",2,2,2,2,2,1,2,1,2,1],
+            [2,20,"mesa",1,1,2,1,1,2,2,1,2,1],
+            [3,23,"Hopper",2,2,2,2,1,2,2,1,2,1],
+            [2,23,"mesa",2,1,3,1,1,1,2,1,2,1],
+            [2,23,"mesa",2,1,3,1,1,1,2,1,2,1],
+            [2,23,"mesa",2,1,3,1,1,1,2,1,2,1]
+        ]
+    },
+    {
+        nombre:"C1 (F) - NC1 (NF)",
+        clasificadoras:[
+            [2,19,"Hopper",1,1,2,0,2,1,2,1,2,1],
+            [2,20,"mesa",2,1,3,0,1,1,2,1,2,1],
+            [2,20,"mesa",2,1,3,0,1,1,2,1,2,1],
+            [3,20,"mesa",2,2,0,2,1,2,2,1,1,1],
+            [2,19,"mesa",2,1,2,0,1,1,2,1,2,1],
+            [3,20,"mesa",2,2,0,2,1,2,2,1,1,1],
+            [2,22,"mesa",2,1,3,1,1,1,2,1,2,1],
+            [2,22,"mesa",2,1,3,1,1,1,2,1,2,1],
+            [2,22,"mesa",2,1,3,1,1,1,2,1,2,1]
+        ]
+    },
+    {
+        nombre:"NC1 (F) - C1 (NF)",
+        clasificadoras:[
+            [2,18,"Hopper",1,1,0,1,2,1,2,1,2,1],
+            [2,18,"mesa",2,1,0,1,1,1,2,1,2,1],
+            [2,18,"mesa",2,1,0,1,1,1,2,1,2,1],
+            [3,20,"mesa",2,2,0,2,1,2,2,1,1,1],
+            [2,18,"mesa",2,1,0,1,1,1,2,1,2,1],
+            [3,20,"mesa",2,2,0,2,1,2,2,1,1,1],
+            [2,20,"mesa",2,1,0,1,1,1,2,1,2,1],
+            [2,20,"mesa",2,1,0,1,1,1,2,1,2,1],
+            [2,20,"mesa",2,1,0,1,1,1,2,1,2,1]
+        ]
+    },
+    {
+        nombre:"NC1",
+        clasificadoras:[
+            [2,17,"mesa",2,1,0,0,1,1,2,1,2,1],
+            [2,17,"mesa",2,1,0,0,1,1,2,1,2,1],
+            [2,17,"mesa",2,1,0,0,1,1,2,1,2,1],
+            [3,18,"mesa",2,2,0,0,1,2,2,1,1,1],
+            [2,17,"mesa",2,1,0,0,1,1,2,1,2,1],
+            [3,18,"mesa",2,2,0,0,1,2,2,1,1,1],
+            [2,17,"mesa",2,1,0,0,1,1,2,1,2,1],
+            [2,17,"mesa",2,1,0,0,1,1,2,1,2,1],
+            [2,17,"mesa",2,1,0,0,1,1,2,1,2,1]
+        ]
+    }
+];
+
 function obtenerEstandaresConsultaMOD(linea){
     if(linea==="LC4"){
         return [
@@ -8034,21 +8092,40 @@ function obtenerEstandaresConsultaMOD(linea){
     const clasif=linea.match(/^CLASIFICADORA ([1-9])$/);
     if(clasif){
         const numero=Number(clasif[1]);
-        const estandar=ESTANDARES_CONSULTA_CLASIFICADORA[numero];
-        return [{
-            line:linea,
-            presentation:"MOD ("+estandar.bandas+" Bandas de Clasificación)",
-            rows:[
-                ["MOD CABECERA DE LÍNEA",String(estandar.cabecera)],
-                ...estandar.funciones,
-                ["MOD FINAL DE LÍNEA",String(estandar.final)],
-                ["Líder","1"],
-                ["Anotador de rendimiento","1"],
-                ["Liquidador mp","1"],
-                ["Codificador","1"]
-            ],
-            total:String(estandar.total)
-        }];
+        return VARIANTES_MOD_CLASIFICADORA.map(function(variante){
+            const datos=variante.clasificadoras[numero-1];
+            const [bandas,cabecera,ubicacionME,hopperF,hopperNF,meF,meNF,
+                llenadoresF,llenadoresNF,pesadoresF,pesadoresNF,estibadoresF,estibadoresNF]=datos;
+            const meFuncion=ubicacionME==="Hopper"?"Retiran M.E. en banda Hopper":"Retiran M.E. en mesa";
+            const inspeccionMaterial=variante.nombre!=="NC1"&&numero>=7?4:2;
+            return {
+                line:linea,
+                presentation:"MOD "+bandas+" "+variante.nombre,
+                rows:[
+                    ["MOD CABECERA DE LÍNEA",String(cabecera)],
+                    ["Tolvero","1"],
+                    ["Inspeccionan material extraño",String(inspeccionMaterial)],
+                    ["Inspeccionan defectos","2"],
+                    ["Abastecedor de gavetas/paneras/bases","1"],
+                    ["Retiran defectos en banda Hopper (F)",String(hopperF)],
+                    ["Retiran defectos en banda Hopper (NF)",String(hopperNF)],
+                    [meFuncion+" (F)",String(meF)],
+                    [meFuncion+" (NF)",String(meNF)],
+                    ["Llenadores (F)",String(llenadoresF)],
+                    ["Llenadores (NF)",String(llenadoresNF)],
+                    ["Pesadores (F)",String(pesadoresF)],
+                    ["Pesadores (NF)",String(pesadoresNF)],
+                    ["Estibadores (F)",String(estibadoresF)],
+                    ["Estibadores (NF)",String(estibadoresNF)],
+                    ["MOD FINAL DE LÍNEA","4"],
+                    ["Líder","1"],
+                    ["Anotador de rendimiento","1"],
+                    ["Liquidador mp","1"],
+                    ["Codificador","1"]
+                ],
+                total:String(Number(cabecera)+4)
+            };
+        });
     }
 
     const retrabajo=linea.match(/^RETRABAJO — (REETIQUETEO|REEMPAQUE|REPROCESO)$/);
