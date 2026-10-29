@@ -3990,6 +3990,69 @@ function obtenerRespuesta(nombre) {
    EXPORTAR AUDITORIA ACTUAL A EXCEL
 ========================================================= */
 
+function valorFechaExcel(valor){
+    if(valor instanceof Date){
+        if(!Number.isFinite(valor.getTime()))return "";
+        valor={
+            anio:valor.getFullYear(),
+            mes:valor.getMonth()+1,
+            dia:valor.getDate(),
+            hora:valor.getHours(),
+            minuto:valor.getMinutes(),
+            segundo:valor.getSeconds()
+        };
+    }else if(typeof valor==="number"){
+        if(valor>100000000000){
+            const fecha=new Date(valor);
+            if(!Number.isFinite(fecha.getTime()))return "";
+            valor={
+                anio:fecha.getFullYear(),
+                mes:fecha.getMonth()+1,
+                dia:fecha.getDate(),
+                hora:fecha.getHours(),
+                minuto:fecha.getMinutes(),
+                segundo:fecha.getSeconds()
+            };
+        }else{
+            return Number.isFinite(valor)?valor:"";
+        }
+    }else if(typeof valor==="string"){
+        const texto=valor.trim();
+        if(!texto)return "";
+        let partes=texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/i);
+        if(partes){
+            valor={
+                anio:Number(partes[1]),mes:Number(partes[2]),dia:Number(partes[3]),
+                hora:Number(partes[4]||0),minuto:Number(partes[5]||0),segundo:Number(partes[6]||0)
+            };
+        }else{
+            partes=texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?)?$/i);
+            if(!partes)return texto;
+            let hora=Number(partes[4]||0);
+            const periodo=(partes[7]||"").replace(/\s|\./g,"").toLowerCase();
+            if(periodo==="pm"&&hora<12)hora+=12;
+            if(periodo==="am"&&hora===12)hora=0;
+            valor={
+                anio:Number(partes[3]),mes:Number(partes[2]),dia:Number(partes[1]),
+                hora,minuto:Number(partes[5]||0),segundo:Number(partes[6]||0)
+            };
+        }
+    }else{
+        return "";
+    }
+
+    const {anio,mes,dia,hora,minuto,segundo}=valor;
+    const fechaUTC=Date.UTC(anio,mes-1,dia,hora,minuto,segundo);
+    const comprobacion=new Date(fechaUTC);
+    if(
+        comprobacion.getUTCFullYear()!==anio||
+        comprobacion.getUTCMonth()!==mes-1||
+        comprobacion.getUTCDate()!==dia||
+        hora>23||minuto>59||segundo>59
+    )return "";
+    return fechaUTC/86400000+25569;
+}
+
 async function descargarLibroExcelFormateado(libro,nombreArchivo){
     if(typeof ExcelJS==="undefined"){
         alert("No se pudo cargar el formato de Excel. Verifique su conexión a Internet e intente nuevamente.");
@@ -4088,6 +4151,19 @@ async function descargarLibroExcelFormateado(libro,nombreArchivo){
                 columns:encabezados,
                 rows:filas
             });
+
+            const formatosFecha={
+                "Fecha registro":"dd/mm/yyyy hh:mm:ss",
+                "Fecha y hora de registro":"dd/mm/yyyy hh:mm:ss",
+                "Día":"dd/mm/yyyy"
+            };
+            for(let numeroColumna=1;numeroColumna<=ultimaColumna;numeroColumna++){
+                const formato=formatosFecha[String(encabezado.getCell(numeroColumna).text||"").trim()];
+                if(!formato)continue;
+                for(let numeroFila=2;numeroFila<=ultimaFila;numeroFila++){
+                    hoja.getRow(numeroFila).getCell(numeroColumna).numFmt=formato;
+                }
+            }
         });
 
         const contenido=await libroFormateado.xlsx.writeBuffer();
@@ -4341,7 +4417,7 @@ async function exportarExcel() {
 
             datosMOD.push([
 
-                auditoria.fechaRegistro || "",
+                valorFechaExcel(auditoria.fechaRegistro),
 
                 item.linea || "",
 
@@ -4398,7 +4474,7 @@ async function exportarExcel() {
         ];
         consulta.rows.forEach(function(fila){
             filasConsulta.push([
-                auditoria.fechaRegistro||"",
+                valorFechaExcel(auditoria.fechaRegistro),
                 consulta.area||"",
                 consulta.equipo||"",
                 consulta.linea||"",
@@ -4409,7 +4485,7 @@ async function exportarExcel() {
             ]);
         });
         filasConsulta.push([
-            auditoria.fechaRegistro||"",
+            valorFechaExcel(auditoria.fechaRegistro),
             consulta.area||"",
             consulta.equipo||"",
             consulta.linea||"",
@@ -4723,9 +4799,9 @@ async function exportarHistorialExcel() {
 
                             aud.id || "",
 
-                            aud.fechaRegistro || "",
+                            valorFechaExcel(aud.fechaRegistro),
 
-                            aud.dia || "",
+                            valorFechaExcel(aud.dia),
 
                             aud.area || "",
 
@@ -4783,9 +4859,9 @@ async function exportarHistorialExcel() {
 
                     aud.id || "",
 
-                    aud.fechaRegistro || "",
+                    valorFechaExcel(aud.fechaRegistro),
 
-                    aud.dia || "",
+                    valorFechaExcel(aud.dia),
 
                     aud.area || "",
 
@@ -4918,9 +4994,9 @@ async function exportarHistorialExcel() {
 
                 aud.id || "",
 
-                aud.fechaRegistro || "",
+                valorFechaExcel(aud.fechaRegistro),
 
-                aud.dia || "",
+                valorFechaExcel(aud.dia),
 
                 aud.area || "",
 
@@ -5024,7 +5100,7 @@ async function exportarHistorialExcel() {
 
                             aud.id || "",
 
-                            aud.dia || "",
+                            valorFechaExcel(aud.dia),
 
                             aud.area || "",
 
@@ -5124,9 +5200,9 @@ async function exportarHistorialExcel() {
 
                             aud.id || "",
 
-                            aud.fechaRegistro || "",
+                            valorFechaExcel(aud.fechaRegistro),
 
-                            aud.dia || "",
+                            valorFechaExcel(aud.dia),
 
                             aud.area || "",
 
@@ -5201,14 +5277,18 @@ async function exportarHistorialExcel() {
         "Estándar (#)",
         "Observado (#)"
     ]];
+    let consultasMODExportadas=0;
     historial.forEach(function(aud){
         const consulta=aud.consultaMOD;
         if(!consulta)return;
+        if(consultasMODExportadas>0){
+            consultaMODHistorialDatos.push(Array(10).fill(""));
+        }
         (consulta.rows||[]).forEach(function(fila){
             consultaMODHistorialDatos.push([
                 aud.id||"",
-                aud.fechaRegistro||"",
-                aud.dia||"",
+                valorFechaExcel(aud.fechaRegistro),
+                valorFechaExcel(aud.dia),
                 consulta.area||aud.area||"",
                 consulta.equipo||aud.equipo||"",
                 consulta.linea||"",
@@ -5220,8 +5300,8 @@ async function exportarHistorialExcel() {
         });
         consultaMODHistorialDatos.push([
             aud.id||"",
-            aud.fechaRegistro||"",
-            aud.dia||"",
+            valorFechaExcel(aud.fechaRegistro),
+            valorFechaExcel(aud.dia),
             consulta.area||aud.area||"",
             consulta.equipo||aud.equipo||"",
             consulta.linea||"",
@@ -5230,6 +5310,7 @@ async function exportarHistorialExcel() {
             consulta.totalEstandar??"",
             consulta.totalObservado??0
         ]);
+        consultasMODExportadas++;
     });
     const wsConsultaMODHistorial=consultaMODHistorialDatos.length>1
         ?XLSX.utils.aoa_to_sheet(consultaMODHistorialDatos)
