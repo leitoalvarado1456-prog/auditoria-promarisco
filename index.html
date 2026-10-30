@@ -4053,6 +4053,15 @@ function valorFechaExcel(valor){
     return fechaUTC/86400000+25569;
 }
 
+function partesFechaHoraExcel(valor){
+    const serial=valorFechaExcel(valor);
+    if(typeof serial!=="number"||!Number.isFinite(serial)){
+        return {fecha:serial,hora:""};
+    }
+    const dia=Math.floor(serial);
+    return {fecha:dia,hora:serial-dia};
+}
+
 async function descargarLibroExcelFormateado(libro,nombreArchivo){
     if(typeof ExcelJS==="undefined"){
         alert("No se pudo cargar el formato de Excel. Verifique su conexión a Internet e intente nuevamente.");
@@ -4155,7 +4164,10 @@ async function descargarLibroExcelFormateado(libro,nombreArchivo){
             const formatosFecha={
                 "Fecha registro":"dd/mm/yyyy hh:mm:ss",
                 "Fecha y hora de registro":"dd/mm/yyyy hh:mm:ss",
-                "Día":"dd/mm/yyyy"
+                "Día":"dd/mm/yyyy",
+                "Día auditado":"dd/mm/yyyy",
+                "Hora registro":"hh:mm:ss",
+                "Hora de registro":"hh:mm:ss"
             };
             for(let numeroColumna=1;numeroColumna<=ultimaColumna;numeroColumna++){
                 const formato=formatosFecha[String(encabezado.getCell(numeroColumna).text||"").trim()];
@@ -4373,15 +4385,15 @@ async function exportarExcel() {
 
         [
 
-            "Fecha y hora de registro",
+            "Fecha de registro",
+
+            "Hora de registro",
 
             "Línea",
 
             "Presentación",
 
             "Kg presentación",
-
-            "Tipo de cálculo",
 
             "MOD Estándar",
 
@@ -4390,8 +4402,6 @@ async function exportarExcel() {
             "Personal en sitio",
 
             "Personas faltantes",
-
-            "Unidades / min",
 
             "Kg/h Teórico",
 
@@ -4414,20 +4424,19 @@ async function exportarExcel() {
 
     auditoria.mod.forEach(
         function(item) {
+            const fechaRegistro=partesFechaHoraExcel(auditoria.fechaRegistro);
 
             datosMOD.push([
 
-                valorFechaExcel(auditoria.fechaRegistro),
+                fechaRegistro.fecha,
+
+                fechaRegistro.hora,
 
                 item.linea || "",
 
                 item.presentacion,
 
                 Number(item.kilos),
-
-                item.tipo === "BASES"
-                    ? "×4 bases ×4 carriles"
-                    : "×4 carriles",
 
                 Number(item.estandar),
 
@@ -4436,8 +4445,6 @@ async function exportarExcel() {
                 Number(item.personalSitio ?? item.personal),
 
                 item.personasFaltantes == null ? "" : Number(item.personasFaltantes),
-
-                Number(item.panerasMin),
 
                 Number(item.teorico) || 0,
 
@@ -4453,7 +4460,9 @@ async function exportarExcel() {
                     item.kgHora.toFixed(2)
                 ),
 
-                item.cumplimiento
+                item.cumplimiento,
+
+                item.observaciones || ""
 
             ]);
 
@@ -4470,13 +4479,14 @@ async function exportarExcel() {
     if(auditoria.consultaMOD){
         const consulta=auditoria.consultaMOD;
         const filasConsulta=[
-            ["Fecha y hora de registro","Área","Equipo","Línea / proceso","Presentación","Función","Estándar (#)","Observado (#)"]
+            ["Fecha de registro","Hora de registro","Área","Línea / proceso","Presentación","Función","Estándar (#)","Observado (#)"]
         ];
+        const fechaRegistro=partesFechaHoraExcel(auditoria.fechaRegistro);
         consulta.rows.forEach(function(fila){
             filasConsulta.push([
-                valorFechaExcel(auditoria.fechaRegistro),
+                fechaRegistro.fecha,
+                fechaRegistro.hora,
                 consulta.area||"",
-                consulta.equipo||"",
                 consulta.linea||"",
                 consulta.presentacion||"",
                 fila.funcion||"",
@@ -4485,9 +4495,9 @@ async function exportarExcel() {
             ]);
         });
         filasConsulta.push([
-            valorFechaExcel(auditoria.fechaRegistro),
+            fechaRegistro.fecha,
+            fechaRegistro.hora,
             consulta.area||"",
-            consulta.equipo||"",
             consulta.linea||"",
             consulta.presentacion||"",
             consulta.totalLabel||"Total equipo",
@@ -4496,7 +4506,7 @@ async function exportarExcel() {
         ]);
         wsConsultaMOD=XLSX.utils.aoa_to_sheet(filasConsulta);
         wsConsultaMOD["!cols"]=[
-            {wch:24},{wch:18},{wch:22},{wch:26},{wch:42},{wch:48},{wch:18},{wch:18}
+            {wch:16},{wch:14},{wch:18},{wch:26},{wch:42},{wch:48},{wch:18},{wch:18}
         ];
     }
 
@@ -4535,55 +4545,25 @@ async function exportarExcel() {
 
     wsMOD["!cols"] = [
 
-        {wch:24},
+        {wch:16},
 
-        {
-            wch: 20
-        },
+        {wch:14},
 
-        {
-            wch: 18
-        },
+        {wch:20},
 
-        {
-            wch: 25
-        },
-
-        {
-            wch: 18
-        },
-
-        {
-            wch: 20
-        },
-
-        {
-            wch: 18
-        },
-
-        {
-            wch: 12
-        },
-
-        {
-            wch: 12
-        },
-
-        {
-            wch: 12
-        },
-
-        {
-            wch: 15
-        },
-
-        {
-            wch: 18
-        },
-
-        {
-            wch: 40
-        }
+        {wch:30},
+        {wch:15},
+        {wch:15},
+        {wch:15},
+        {wch:15},
+        {wch:16},
+        {wch:15},
+        {wch:12},
+        {wch:12},
+        {wch:12},
+        {wch:15},
+        {wch:18},
+        {wch:40}
 
     ];
 
@@ -4739,13 +4719,13 @@ async function exportarHistorialExcel() {
 
             "Fecha registro",
 
-            "Día",
+            "Hora registro",
+
+            "Día auditado",
 
             "Área",
 
             "Turno",
-
-            "Equipo",
 
             "Supervisor",
 
@@ -4763,13 +4743,9 @@ async function exportarHistorialExcel() {
 
             "Kg presentación",
 
-            "Tipo cálculo",
-
             "Estándar MOD",
 
             "Personal",
-
-            "Paneras/min",
 
             "Kg/h",
 
@@ -4786,6 +4762,7 @@ async function exportarHistorialExcel() {
 
     historial.forEach(
         function(aud) {
+            const fechaRegistro=partesFechaHoraExcel(aud.fechaRegistro);
 
             if(
                 aud.mod &&
@@ -4799,15 +4776,15 @@ async function exportarHistorialExcel() {
 
                             aud.id || "",
 
-                            valorFechaExcel(aud.fechaRegistro),
+                            fechaRegistro.fecha,
+
+                            fechaRegistro.hora,
 
                             valorFechaExcel(aud.dia),
 
                             aud.area || "",
 
                             aud.turno || "",
-
-                            aud.equipo || "",
 
                             aud.supervisor || "",
 
@@ -4825,15 +4802,9 @@ async function exportarHistorialExcel() {
 
                             Number(item.kilos) || 0,
 
-                            item.tipo === "BASES"
-                                ? "×4 bases ×4 carriles"
-                                : "×4 carriles",
-
                             Number(item.estandar) || 0,
 
                             Number(item.personal) || 0,
-
-                            Number(item.panerasMin) || 0,
 
                             Number(
                                 Number(item.kgHora || 0)
@@ -4859,15 +4830,15 @@ async function exportarHistorialExcel() {
 
                     aud.id || "",
 
-                    valorFechaExcel(aud.fechaRegistro),
+                    fechaRegistro.fecha,
+
+                    fechaRegistro.hora,
 
                     valorFechaExcel(aud.dia),
 
                     aud.area || "",
 
                     aud.turno || "",
-
-                    aud.equipo || "",
 
                     aud.supervisor || "",
 
@@ -4878,10 +4849,6 @@ async function exportarHistorialExcel() {
                     aud.checks || 0,
 
                     aud.evaluacion || "",
-
-                    "",
-
-                    "",
 
                     "",
 
@@ -4918,11 +4885,11 @@ async function exportarHistorialExcel() {
     wsHistorial["!cols"] = [
 
         {wch:18},
+        {wch:14},
         {wch:22},
         {wch:14},
         {wch:20},
         {wch:12},
-        {wch:22},
         {wch:25},
         {wch:25},
         {wch:25},
@@ -4930,9 +4897,7 @@ async function exportarHistorialExcel() {
         {wch:18},
         {wch:20},
         {wch:18},
-        {wch:25},
         {wch:18},
-        {wch:15},
         {wch:15},
         {wch:18},
         {wch:18},
@@ -4958,13 +4923,13 @@ async function exportarHistorialExcel() {
 
             "Fecha registro",
 
-            "Día",
+            "Hora registro",
+
+            "Día auditado",
 
             "Área",
 
             "Turno",
-
-            "Equipo",
 
             "Supervisor",
 
@@ -4989,20 +4954,21 @@ async function exportarHistorialExcel() {
 
     historial.forEach(
         function(aud) {
+            const fechaRegistro=partesFechaHoraExcel(aud.fechaRegistro);
 
             auditoriasDatos.push([
 
                 aud.id || "",
 
-                valorFechaExcel(aud.fechaRegistro),
+                fechaRegistro.fecha,
+
+                fechaRegistro.hora,
 
                 valorFechaExcel(aud.dia),
 
                 aud.area || "",
 
                 aud.turno || "",
-
-                aud.equipo || "",
 
                 aud.supervisor || "",
 
@@ -5037,11 +5003,11 @@ async function exportarHistorialExcel() {
     wsAuditorias["!cols"] = [
 
         {wch:18},
+        {wch:14},
         {wch:22},
         {wch:14},
         {wch:20},
         {wch:12},
-        {wch:22},
         {wch:25},
         {wch:25},
         {wch:25},
@@ -5066,11 +5032,11 @@ async function exportarHistorialExcel() {
 
             "ID Auditoría",
 
-            "Día",
+            "Día auditado",
+
+            "Hora registro",
 
             "Área",
-
-            "Equipo",
 
             "Pregunta",
 
@@ -5095,6 +5061,7 @@ async function exportarHistorialExcel() {
 
                 aud.preguntas.forEach(
                     function(p) {
+                        const fechaRegistro=partesFechaHoraExcel(aud.fechaRegistro);
 
                         rendimientoDatos.push([
 
@@ -5102,9 +5069,9 @@ async function exportarHistorialExcel() {
 
                             valorFechaExcel(aud.dia),
 
-                            aud.area || "",
+                            fechaRegistro.hora,
 
-                            aud.equipo || "",
+                            aud.area || "",
 
                             "Pregunta " + p.numero,
 
@@ -5135,8 +5102,8 @@ async function exportarHistorialExcel() {
 
         {wch:18},
         {wch:14},
+        {wch:14},
         {wch:20},
-        {wch:22},
         {wch:18},
         {wch:15},
         {wch:12},
@@ -5157,13 +5124,13 @@ async function exportarHistorialExcel() {
 
             "ID Auditoría",
 
-            "Fecha y hora de registro",
+            "Fecha registro",
 
-            "Día",
+            "Hora de registro",
+
+            "Día auditado",
 
             "Área",
-
-            "Equipo",
 
             "Línea",
 
@@ -5171,13 +5138,9 @@ async function exportarHistorialExcel() {
 
             "Kg",
 
-            "Tipo",
-
             "Estándar MOD",
 
             "Personal",
-
-            "Paneras/min",
 
             "Kg/h",
 
@@ -5195,18 +5158,19 @@ async function exportarHistorialExcel() {
 
                 aud.mod.forEach(
                     function(item) {
+                        const fechaRegistro=partesFechaHoraExcel(aud.fechaRegistro);
 
                         modHistorialDatos.push([
 
                             aud.id || "",
 
-                            valorFechaExcel(aud.fechaRegistro),
+                            fechaRegistro.fecha,
+
+                            fechaRegistro.hora,
 
                             valorFechaExcel(aud.dia),
 
                             aud.area || "",
-
-                            aud.equipo || "",
 
                             item.linea || "",
 
@@ -5214,13 +5178,9 @@ async function exportarHistorialExcel() {
 
                             Number(item.kilos) || 0,
 
-                            item.tipo || "",
-
                             Number(item.estandar) || 0,
 
                             Number(item.personal) || 0,
-
-                            Number(item.panerasMin) || 0,
 
                             Number(
                                 Number(item.kgHora || 0)
@@ -5249,28 +5209,26 @@ async function exportarHistorialExcel() {
     wsMODHistorial["!cols"] = [
 
         {wch:18},
-        {wch:24},
+        {wch:14},
+        {wch:14},
         {wch:14},
         {wch:20},
         {wch:22},
-        {wch:20},
+        {wch:35},
         {wch:12},
-        {wch:18},
-        {wch:18},
+        {wch:16},
         {wch:15},
         {wch:15},
-        {wch:18},
-        {wch:18},
-        {wch:45}
+        {wch:18}
 
     ];
 
     const consultaMODHistorialDatos=[[
         "ID Auditoría",
-        "Fecha y hora de registro",
-        "Día",
+        "Fecha registro",
+        "Hora registro",
+        "Día auditado",
         "Área",
-        "Equipo",
         "Línea / proceso",
         "Presentación",
         "Función",
@@ -5287,10 +5245,10 @@ async function exportarHistorialExcel() {
         (consulta.rows||[]).forEach(function(fila){
             consultaMODHistorialDatos.push([
                 aud.id||"",
-                valorFechaExcel(aud.fechaRegistro),
+                partesFechaHoraExcel(aud.fechaRegistro).fecha,
+                partesFechaHoraExcel(aud.fechaRegistro).hora,
                 valorFechaExcel(aud.dia),
                 consulta.area||aud.area||"",
-                consulta.equipo||aud.equipo||"",
                 consulta.linea||"",
                 consulta.presentacion||"",
                 fila.funcion||"",
@@ -5300,10 +5258,10 @@ async function exportarHistorialExcel() {
         });
         consultaMODHistorialDatos.push([
             aud.id||"",
-            valorFechaExcel(aud.fechaRegistro),
+            partesFechaHoraExcel(aud.fechaRegistro).fecha,
+            partesFechaHoraExcel(aud.fechaRegistro).hora,
             valorFechaExcel(aud.dia),
             consulta.area||aud.area||"",
-            consulta.equipo||aud.equipo||"",
             consulta.linea||"",
             consulta.presentacion||"",
             consulta.totalLabel||"Total equipo",
@@ -5317,7 +5275,7 @@ async function exportarHistorialExcel() {
         :null;
     if(wsConsultaMODHistorial){
         wsConsultaMODHistorial["!cols"]=[
-            {wch:18},{wch:24},{wch:14},{wch:20},{wch:22},{wch:26},{wch:42},{wch:48},{wch:18},{wch:18}
+            {wch:18},{wch:14},{wch:14},{wch:14},{wch:20},{wch:26},{wch:42},{wch:48},{wch:18},{wch:18}
         ];
     }
 
