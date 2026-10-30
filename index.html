@@ -4435,7 +4435,7 @@ async function exportarExcel() {
 
                 item.linea || "",
 
-                item.presentacion,
+                presentacionExcelMOD(item.linea,item.presentacion),
 
                 Number(item.kilos),
 
@@ -4799,7 +4799,7 @@ async function exportarHistorialExcel() {
 
                             item.linea || "",
 
-                            item.presentacion || "",
+                            presentacionExcelMOD(item.linea,item.presentacion),
 
                             Number(item.kilos) || 0,
 
@@ -5175,7 +5175,7 @@ async function exportarHistorialExcel() {
 
                             item.linea || "",
 
-                            item.presentacion || "",
+                            presentacionExcelMOD(item.linea,item.presentacion),
 
                             Number(item.kilos) || 0,
 
@@ -5956,7 +5956,6 @@ function renderMODClasificadora(){
             <option value="CAJA AUTOARMABLE">CAJA AUTOARMABLE</option>
             <option value="PANERA">PANERA</option>
             <option value="TARRINA">TARRINA</option>
-            <option value="BIN">BIN</option>
           </select>
         </td>
         <td>
@@ -5984,6 +5983,13 @@ function renderMODClasificadora(){
     }
 
     cargarEstandarClasif();
+}
+
+function presentacionExcelMOD(linea,presentacion){
+    if(!/^Clasificadora [1-9]$/.test(String(linea||"")))return presentacion||"";
+    const envase=String(presentacion||"").split("/")[1]?.trim().toUpperCase();
+    const envases=["BASE","PANERA","CAJA AUTOARMABLE","TARRINA"];
+    return envases.find(function(nombre){return nombre===envase;})||"";
 }
 
 /* =========================================================
@@ -6290,7 +6296,6 @@ const ESTANDARES_CLASIF = [
   {p:"CC",e:"TARRINA",w:1.61,v:[2722,1762,1850,1722,1900,1722,2296,2296,2296]},
   {p:"CC",e:"TARRINA",w:1.9,v:[3020,1778,2061,1778,2061,1778,2061,2061,2061]},
   {p:"SC",e:"TARRINA",w:1.76,v:[1053,874,874,1053,822,1053,822,822,822]},
-  {p:"CC",e:"BIN",w:380,v:[2706,0,0,0,0,0,0,0,0]},
   {p:"CC",e:"TARRINA",w:1.71,v:[2722,1722,800,1722,2296,1722,2296,2296,2296]},
   {p:"CC",e:"PANERA",w:4.86,v:[3500,3340,3818,3340,4120,3340,2900,4120,3500]},
   {p:"CC",e:"CAJA AUTOARMABLE",w:1.36,v:[1150,1000,1120,1840,1120,1840,1120,1120,1120]},
